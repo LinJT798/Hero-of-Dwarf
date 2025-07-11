@@ -1,0 +1,45 @@
+{
+  "shop_settings": {
+    "slot_count": 2,
+    "auto_refresh": true,
+    "refresh_on_all_purchased": true,
+    "position": {
+      "x": 71,
+      "y": -5
+    }
+  },
+  "products": [
+    {
+      "id": "arrow_tower_1",
+      "type": "arrow_tower",
+      "name": "弓箭塔",
+      "cost": {
+        "wood": 2,
+        "stone": 1,
+        "gold": 1
+      },
+      "weight": 10
+    },
+    {
+      "id": "arrow_tower_2",
+      "type": "arrow_tower",
+      "name": "弓箭塔",
+      "cost": {
+        "wood": 3,
+        "stone": 2
+      },
+      "weight": 8
+    },
+    {
+      "id": "arrow_tower_3",
+      "type": "arrow_tower",
+      "name": "弓箭塔",
+      "cost": {
+        "wood": 1,
+        "stone": 3,
+        "gold": 2
+      },
+      "weight": 6
+    }
+  ]
+}

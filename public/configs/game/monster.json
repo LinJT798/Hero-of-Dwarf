@@ -1,0 +1,19 @@
+{
+  "basic_monster": {
+    "stats": {
+      "health": 50,
+      "move_speed": 60,
+      "attack_damage": 20,
+      "attack_speed": 1.5
+    },
+    "behavior": {
+      "move_pattern": "linear",
+      "attack_type": "melee",
+      "death_drop_chance": 0.3
+    },
+    "size": {
+      "width": 40,
+      "height": 40
+    }
+  }
+}

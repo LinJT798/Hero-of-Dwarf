@@ -1,0 +1,20 @@
+{
+  "arrow_tower": {
+    "stats": {
+      "attack_damage": 25,
+      "attack_speed": 1.2,
+      "attack_range": 120,
+      "health": 100
+    },
+    "cost": {
+      "wood": 2,
+      "stone": 1,
+      "gold": 1
+    },
+    "build_time": 2.0,
+    "size": {
+      "width": 60,
+      "height": 60
+    }
+  }
+}

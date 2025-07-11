@@ -1,0 +1,1736 @@
+{
+  "metadata": {
+    "exportedAt": "2025-07-10T07:41:03.751Z",
+    "componentName": "MacBook Air - 1",
+    "totalElements": 129,
+    "nestingDepth": 4,
+    "plugin": "Figma to JSON Exporter"
+  },
+  "designTokens": {
+    "colors": {
+      "color-rgb(255, 255, 255)": "rgb(255, 255, 255)",
+      "color-rgb(102, 59, 20)": "rgb(102, 59, 20)",
+      "color-rgb(217, 217, 217)": "rgb(217, 217, 217)",
+      "color-rgb(255, 209, 171)": "rgb(255, 209, 171)",
+      "color-rgb(92, 88, 84)": "rgb(92, 88, 84)",
+      "color-rgb(0, 0, 0)": "rgb(0, 0, 0)"
+    },
+    "fonts": {
+      "abyssinica-sil": {
+        "family": "Abyssinica SIL",
+        "sizes": {
+          "size-48": "48px",
+          "size-24": "24px",
+          "size-16": "16px"
+        },
+        "weights": {
+          "weight-400": "400"
+        }
+      }
+    },
+    "spacing": {},
+    "effects": {}
+  },
+  "structure": {
+    "name": "macbook-air---1",
+    "type": "FRAME",
+    "size": {
+      "w": 1280,
+      "h": 832
+    },
+    "styles": {
+      "bg": "rgb(255, 255, 255)",
+      "layout": {
+        "direction": "row",
+        "gap": 0,
+        "align": {
+          "main": "start",
+          "cross": "start"
+        }
+      }
+    },
+    "children": [
+      {
+        "name": "back_sky",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1280,
+          "h": 832
+        }
+      },
+      {
+        "name": "back_land",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1280,
+          "h": 747
+        }
+      },
+      {
+        "name": "game_frame",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 649,
+          "h": 533
+        }
+      },
+      {
+        "name": "rectangle-1",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 552,
+          "h": 472
+        },
+        "styles": {
+          "bg": "rgb(102, 59, 20)"
+        }
+      },
+      {
+        "name": "map",
+        "type": "GROUP",
+        "size": {
+          "w": 459,
+          "h": 357
+        },
+        "children": [
+          {
+            "name": "group-1",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-2",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-3",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-4",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-5",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-6",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "group-7",
+            "type": "GROUP",
+            "size": {
+              "w": 459,
+              "h": 51
+            },
+            "children": [
+              {
+                "name": "rectangle-2",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-3",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-4",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-5",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-6",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-7",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-8",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-9",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              },
+              {
+                "name": "rectangle-10",
+                "type": "RECTANGLE",
+                "size": {
+                  "w": 51,
+                  "h": 51
+                },
+                "styles": {
+                  "bg": "rgb(217, 217, 217)",
+                  "border": {
+                    "width": 1,
+                    "color": "rgb(0, 0, 0)"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "cube_frame",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 50,
+          "h": 51
+        }
+      },
+      {
+        "name": "land",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 1280,
+          "h": 17
+        },
+        "styles": {
+          "bg": "rgb(217, 217, 217)"
+        }
+      },
+      {
+        "name": "store",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 277,
+          "h": 495
+        }
+      },
+      {
+        "name": "castle",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 460,
+          "h": 384
+        }
+      },
+      {
+        "name": "building2",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 189,
+          "h": 96
+        },
+        "styles": {
+          "bg": "rgb(255, 209, 171)"
+        }
+      },
+      {
+        "name": "building1",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 189,
+          "h": 96
+        },
+        "styles": {
+          "bg": "rgb(255, 209, 171)"
+        }
+      },
+      {
+        "name": "archer_building8",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building7",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building6",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building5",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building4",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building3",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building2",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_building1",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 162,
+          "h": 162
+        }
+      },
+      {
+        "name": "archer_icon",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 85,
+          "h": 85
+        }
+      },
+      {
+        "name": "archer_icon",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 85,
+          "h": 85
+        }
+      },
+      {
+        "name": "comnpeleted_icon",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 189,
+          "h": 96
+        },
+        "styles": {
+          "bg": "rgb(92, 88, 84)"
+        }
+      },
+      {
+        "name": "sold",
+        "type": "TEXT",
+        "size": {
+          "w": 100,
+          "h": 60
+        },
+        "content": "Sold",
+        "styles": {
+          "bg": "rgb(255, 255, 255)",
+          "text": {
+            "family": "Abyssinica SIL",
+            "size": 48,
+            "weight": "400",
+            "align": "left"
+          }
+        }
+      },
+      {
+        "name": "coin_store",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 22,
+          "h": 22
+        }
+      },
+      {
+        "name": "coin_cube",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "name": "10",
+        "type": "TEXT",
+        "size": {
+          "w": 27,
+          "h": 22
+        },
+        "content": "10",
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "text": {
+            "family": "Abyssinica SIL",
+            "size": 24,
+            "weight": "400",
+            "align": "center"
+          }
+        }
+      },
+      {
+        "name": "10",
+        "type": "TEXT",
+        "size": {
+          "w": 27,
+          "h": 22
+        },
+        "content": "10",
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "text": {
+            "family": "Abyssinica SIL",
+            "size": 24,
+            "weight": "400",
+            "align": "center"
+          }
+        }
+      },
+      {
+        "name": "10",
+        "type": "TEXT",
+        "size": {
+          "w": 27,
+          "h": 22
+        },
+        "content": "10",
+        "styles": {
+          "bg": "rgb(0, 0, 0)",
+          "text": {
+            "family": "Abyssinica SIL",
+            "size": 24,
+            "weight": "400",
+            "align": "center"
+          }
+        }
+      },
+      {
+        "name": "processed_frame_1-2",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 122,
+          "h": 122
+        }
+      },
+      {
+        "name": "wood_cube",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "name": "wood_store",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 22,
+          "h": 22
+        }
+      },
+      {
+        "name": "store",
+        "type": "GROUP",
+        "size": {
+          "w": 190,
+          "h": 96
+        },
+        "children": [
+          {
+            "name": "building3",
+            "type": "VECTOR",
+            "size": {
+              "w": 189,
+              "h": 96
+            },
+            "styles": {
+              "bg": "rgb(255, 209, 171)"
+            }
+          },
+          {
+            "name": "archer_icon",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 85,
+              "h": 85
+            }
+          },
+          {
+            "name": "coin_store",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 22,
+              "h": 22
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 27,
+              "h": 22
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(0, 0, 0)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 24,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 27,
+              "h": 22
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(0, 0, 0)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 24,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 27,
+              "h": 22
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(0, 0, 0)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 24,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "wood_store",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 22,
+              "h": 22
+            }
+          },
+          {
+            "name": "stone_store",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 22,
+              "h": 21
+            }
+          }
+        ]
+      },
+      {
+        "name": "stone_store",
+        "type": "RECTANGLE",
+        "size": {
+          "w": 22,
+          "h": 21
+        }
+      },
+      {
+        "name": "information",
+        "type": "GROUP",
+        "size": {
+          "w": 170,
+          "h": 304
+        },
+        "children": [
+          {
+            "name": "store",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 170,
+              "h": 304
+            }
+          },
+          {
+            "name": "coin_game",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 34,
+              "h": 34
+            }
+          },
+          {
+            "name": "wood_game",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 34,
+              "h": 34
+            }
+          },
+          {
+            "name": "--",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "金币",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "--",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "石头",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "--",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "木头",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "--",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "食物",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "--",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "秘银",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "10",
+            "type": "TEXT",
+            "size": {
+              "w": 46,
+              "h": 15
+            },
+            "content": "10",
+            "styles": {
+              "bg": "rgb(255, 255, 255)",
+              "text": {
+                "family": "Abyssinica SIL",
+                "size": 16,
+                "weight": "400",
+                "align": "center"
+              }
+            }
+          },
+          {
+            "name": "stone_game",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 34,
+              "h": 34
+            }
+          },
+          {
+            "name": "food_game",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 34,
+              "h": 33
+            }
+          },
+          {
+            "name": "silver_game",
+            "type": "RECTANGLE",
+            "size": {
+              "w": 34,
+              "h": 34
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "components": 0,
+    "instances": 0,
+    "frames": 1,
+    "texts": 17,
+    "hasAutoLayout": true,
+    "hasEffects": false
+  }
+}

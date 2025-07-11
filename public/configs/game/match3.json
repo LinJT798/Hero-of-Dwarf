@@ -1,0 +1,19 @@
+{
+  "gridWidth": 9,
+  "gridHeight": 7,
+  "cellSize": 51,
+  "resourceTypes": ["gold", "wood", "stone", "mithril", "food"],
+  "dropWeights": {
+    "gold": 25,
+    "wood": 30,
+    "stone": 25,
+    "mithril": 15,
+    "food": 20
+  },
+  "dropProbability": 0.8,
+  "refreshOnComplete": true,
+  "position": {
+    "x": 469,
+    "y": 90
+  }
+}

@@ -1,0 +1,2386 @@
+╭───────────────────────────────────────────────────╮
+│ ✻ Welcome to Claude Code!                         │
+│                                                   │
+│   /help for help, /status for your current setup  │
+│                                                   │
+│   cwd: /Users/linsongzi/Documents/Magic Same      │
+╰───────────────────────────────────────────────────╯
+
+⏺ Compact summary (ctrl+r to expand)
+  ⎿  Read src/entities/Match3Cell.ts (234 lines)
+  ⎿  Read src/scenes/MainGameScene.ts (558 lines)
+  ⎿  Read macbook-air---1-structure.json (100+ lines)
+  ⎿  Read src/entities/Shop.ts (488 lines)
+  ⎿  Read src/managers/BuildingManager.ts (483 lines)
+  ⎿  Todo list read (2 items)
+
+⏺ I'll help you implement real resource images for the match-3 cells. Let me update the
+  Match3Cell.ts file to use actual resource images instead of colored rectangles.
+
+⏺ Update(src/entities/Match3Cell.ts)
+  ⎿  Error: No changes to make: old_string and new_string are exactly the same.
+
+⏺ Update(src/entities/Match3Cell.ts)
+  ⎿  Updated src/entities/Match3Cell.ts with 5 additions and 14 removals                           
+       58        private createResourceSprite(scene: Phaser.Scene, x: number, y: number): void {
+       59            if (this.isEmpty) return;
+       60    
+       61 -          // 创建资源图片，大小参考coin_game (34x34)
+       62 -          const color = this.getResourceColor(this.resourceType);
+       63 -          this.resourceSprite = scene.add.rectangle(x, y, 34, 34, color);
+       61 +          // 使用真实资源图片 (34x34px)
+       62 +          const resourceKey = this.resourceType === 'gold' ? 'coin' : this.resourceType;
+       63 +          this.resourceSprite = scene.add.image(x, y, resourceKey);
+       64            this.resourceSprite.setOrigin(0.5); // 居中显示
+       65 -          
+       66 -          // 添加简单的资源标识文字
+       67 -          this.textLabel = scene.add.text(x, y, this.getResourceText(this.resourceType), 
+          - {
+       68 -              fontSize: '16px',
+       69 -              color: '#FFFFFF',
+       70 -              fontStyle: 'bold',
+       71 -              stroke: '#000000',
+       72 -              strokeThickness: 2
+       73 -          });
+       74 -          this.textLabel.setOrigin(0.5);
+       75 -          this.textLabel.setDepth(5); // 确保文字在资源图标上方
+       65 +          this.resourceSprite.setDisplaySize(34, 34); // 确保尺寸为34x34
+       66 +          this.resourceSprite.setDepth(1); // 确保资源图片在背景之上
+       67        }
+       68    
+       69        private getResourceColor(type: string): number {
+
+⏺ Now let me also check and update the DroppedResource class to use real resource images with
+  physics:
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 182 lines (ctrl+r to expand)
+
+⏺ Let me update the DroppedResource class to use real resource images and add physics with gravity
+  and bounce effects:
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 6 additions and 2 removals
+        4     */
+        5    export class DroppedResource {
+        6        private scene: Phaser.Scene;
+        7 -      private sprite: Phaser.GameObjects.Rectangle;
+        7 +      private sprite: Phaser.GameObjects.Image;
+        8        private resourceType: string;
+        9        private targetY: number;
+       10 -      private fallSpeed: number = 400; // 像素/秒
+       10 +      private velocity: { x: number; y: number };
+       11 +      private gravity: number = 800; // 重力加速度 (像素/秒²)
+       12 +      private bounceVelocity: number = 0;
+       13 +      private bounceDecay: number = 0.6; // 反弹衰减系数
+       14        private isCollected: boolean = false;
+       15        private claimedBy: string | null = null; // 被哪个矮人认领
+       16 +      private hasLanded: boolean = false;
+       17        
+       18        // 资源大小
+       19        private readonly RESOURCE_SIZE = 30;
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 51 additions and 34 removals                     
+       29            this.resourceType = resourceType;
+       30            this.targetY = this.GROUND_Y - this.RESOURCE_SIZE / 2; // 资源底部接触地面
+       31            
+       32 -          // 创建资源精灵（暂时使用色块）
+       33 -          const color = this.getResourceColor(resourceType);
+       34 -          this.sprite = scene.add.rectangle(x, y, this.RESOURCE_SIZE, 
+     this.RESOURCE_SIZE, color);
+          -  color);
+       35 -          this.sprite.setStrokeStyle(2, 0x000000);
+       32 +          // 使用真实资源图片
+       33 +          const resourceKey = resourceType === 'gold' ? 'coin' : resourceType;
+       34 +          this.sprite = scene.add.image(x, y, resourceKey);
+       35 +          this.sprite.setDisplaySize(this.RESOURCE_SIZE, this.RESOURCE_SIZE);
+       36            this.sprite.setDepth(5);
+       37            
+       38 -          // 添加资源类型文字
+       39 -          const text = scene.add.text(x, y, this.getResourceSymbol(resourceType), {
+       40 -              fontSize: '14px',
+       41 -              color: '#FFFFFF',
+       42 -              fontStyle: 'bold',
+       43 -              stroke: '#000000',
+       44 -              strokeThickness: 2
+       45 -          });
+       46 -          text.setOrigin(0.5);
+       47 -          text.setDepth(6);
+       38 +          // 初始化物理属性
+       39 +          this.velocity = {
+       40 +              x: (Math.random() - 0.5) * 100, // 随机水平速度 (-50 到 50)
+       41 +              y: 0 // 初始垂直速度为0
+       42 +          };
+       43            
+       44 -          // 将文字附加到精灵上
+       45 -          this.sprite.setData('text', text);
+       44 +          // 随机初始反弹速度
+       45 +          this.bounceVelocity = Math.random() * 200 + 300; // 300-500的反弹速度
+       46        }
+       47    
+       48        /**
+     ...
+        57            if (this.isCollected) return false;
+        58            
+        59            const deltaSeconds = delta / 1000;
+        60 -          const fallDistance = this.fallSpeed * deltaSeconds;
+        60            
+        61 -          const currentY = this.sprite.y;
+        61 +          // 应用重力
+        62 +          this.velocity.y += this.gravity * deltaSeconds;
+        63            
+        64 -          if (currentY < this.targetY) {
+        65 -              // 继续下落
+        66 -              const newY = Math.min(currentY + fallDistance, this.targetY);
+        67 -              this.sprite.setY(newY);
+        64 +          // 更新位置
+        65 +          const newX = this.sprite.x + this.velocity.x * deltaSeconds;
+        66 +          const newY = this.sprite.y + this.velocity.y * deltaSeconds;
+        67 +          
+        68 +          this.sprite.setX(newX);
+        69 +          
+        70 +          // 检查是否碰到地面
+        71 +          if (newY >= this.targetY) {
+        72 +              this.sprite.setY(this.targetY);
+        73                
+        74 -              // 更新文字位置
+        75 -              const text = this.sprite.getData('text') as Phaser.GameObjects.Text;
+        76 -              if (text) {
+        77 -                  text.setY(newY);
+        74 +              // 反弹效果
+        75 +              if (!this.hasLanded || Math.abs(this.velocity.y) > 50) {
+        76 +                  this.velocity.y = -this.bounceVelocity;
+        77 +                  this.bounceVelocity *= this.bounceDecay; // 每次反弹衰减
+        78 +                  
+        79 +                  // 增加一些随机性
+        80 +                  this.velocity.x = (Math.random() - 0.5) * 50;
+        81 +                  
+        82 +                  // 第一次落地
+        83 +                  if (!this.hasLanded) {
+        84 +                      this.hasLanded = true;
+        85 +                  }
+        86 +              } else {
+        87 +                  // 停止运动
+        88 +                  this.velocity.y = 0;
+        89 +                  this.velocity.x *= 0.9; // 水平速度逐渐减小
+        90 +                  
+        91 +                  // 如果速度很小，完全停止
+        92 +                  if (Math.abs(this.velocity.x) < 1) {
+        93 +                      this.velocity.x = 0;
+        94 +                  }
+        95                }
+        96 -              
+        97 -              return true; // 仍在掉落
+        96            } else {
+        97 -              // 已到达地面
+        98 -              return false; // 停止掉落
+        97 +              this.sprite.setY(newY);
+        98            }
+        99 +          
+       100 +          // 边界检查
+       101 +          if (this.sprite.x < 0 || this.sprite.x > 1280) {
+       102 +              this.velocity.x = -this.velocity.x; // 反弹
+       103 +          }
+       104 +          
+       105 +          return true; // 继续更新
+       106        }
+       107    
+       108        /**
+     ...
+       177         * 销毁资源
+       178         */
+       179        public destroy(): void {
+       180 -          const text = this.sprite.getData('text') as Phaser.GameObjects.Text;
+       181 -          if (text) {
+       182 -              text.destroy();
+       183 -          }
+       180            this.sprite.destroy();
+       181        }
+       182    }
+       183   \ No newline at end of file
+
+⏺ Now I need to update the MainGameScene to ensure the resource images are used instead of colored
+  rectangles in the drop animation:
+
+⏺ Update(src/scenes/MainGameScene.ts)
+  ⎿  Updated src/scenes/MainGameScene.ts with 3 additions and 35 removals                  
+       444        }
+       445    
+       446        private createDropAnimation(resourceType: string, startPosition: any) {
+       447 -          // 创建掉落的资源对象
+       448 -          let dropResource;
+       449 -          if (resourceType === 'gold') {
+       450 -              // 金币使用实际图片
+       451 -              dropResource = this.add.image(
+       452 -                  this.MATCH3_X + startPosition.x,
+       453 -                  this.MATCH3_Y + startPosition.y,
+       454 -                  'coin_game'
+       455 -              );
+       456 -              dropResource.setDisplaySize(20, 20);
+       457 -          } else {
+       458 -              // 其他资源使用颜色方块
+       459 -              dropResource = this.add.rectangle(
+       460 -                  this.MATCH3_X + startPosition.x,
+       461 -                  this.MATCH3_Y + startPosition.y,
+       462 -                  20,
+       463 -                  20,
+       464 -                  this.getResourceColor(resourceType)
+       465 -              );
+       466 -          }
+       467 -  
+       468 -          // 动画掉落到地面
+       469 -          this.tweens.add({
+       470 -              targets: dropResource,
+       471 -              y: this.GROUND_Y - 30,
+       472 -              x: this.MATCH3_X + startPosition.x + (Math.random() - 0.5) * 100,
+       473 -              duration: 1000,
+       474 -              ease: 'Bounce.easeOut',
+       475 -              onComplete: () => {
+       476 -                  // 掉落完成后短暂停留然后消失
+       477 -                  this.time.delayedCall(500, () => {
+       478 -                      dropResource.destroy();
+       479 -                  });
+       480 -              }
+       481 -          });
+       447 +          // 这个方法现在不再使用，因为Match3Grid直接创建DroppedResource对象
+       448 +          // DroppedResource类已经包含了真实的资源图片和物理效果
+       449 +          console.log('createDropAnimation is deprecated');
+       450        }
+       451    
+       452        private updateResourceCount(resourceType: string, amount: number) {
+
+⏺ Update Todos
+  ⎿  ☒ 连连看方块使用真实资源图片(34×34px)
+     ☒ 掉落资源使用真实图片并添加物理效果
+
+⏺ 完成了！我已经更新了代码：
+
+  1. Match3Cell.ts -
+  连连看方块现在使用真实的资源图片（34×34px），金币使用coin图片，其他资源使用对应的图片文件。
+  2. DroppedResource.ts - 掉落资源现在：
+    - 使用真实的资源图片
+    - 添加了重力加速度（800像素/秒²）
+    - 落地时有随机反弹效果（初始反弹速度300-500）
+    - 反弹速度逐渐衰减（衰减系数0.6）
+    - 有随机的水平速度，增加真实感
+    - 碰到边界会反弹
+
+  现在连连看游戏中的方块都会显示真实的资源图片，消除后掉落的资源也会有真实的物理效果。
+
+> 很好，实现的效果非常棒！现在有个问题，请你看代码后回答我：矮人的状态什么时候会更新一次？
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 755 lines (ctrl+r to expand)
+
+⏺ Read(src/managers/DwarfManager.ts)
+  ⎿  Read 255 lines (ctrl+r to expand)
+
+⏺ 根据代码分析，矮人的状态更新时机如下：
+
+  矮人状态在每个游戏帧都会更新。具体更新流程是：
+
+  1. MainGameScene.ts:554-556 - 主场景的update方法每帧调用DwarfManager的update方法
+  if (this.dwarfManager) {
+      this.dwarfManager.update(delta);
+  }
+
+  2. DwarfManager.ts:220-224 - DwarfManager更新所有矮人
+  public update(delta: number): void {
+      this.dwarfs.forEach(dwarf => {
+          dwarf.update(delta);
+      });
+  }
+
+  3. Dwarf.ts:174-180 - 每个矮人的update方法被调用
+  public update(delta: number): void {
+      if (this.isMoving) {
+          this.updateMovement(delta);
+      }
+      this.updateTaskLogic(delta);
+  }
+
+  矮人状态更新包括：
+  - 移动更新 - 如果正在移动，更新位置
+  - 任务逻辑更新 - 包括：
+    - 检查战斗（checkForCombat）
+    - 检查地面资源（checkForResources）
+    - 检查任务队列（checkTaskQueue）
+    - 处理当前任务（processCurrentTask）
+    - 空闲时随机移动（updateIdleMovement）
+
+  所以矮人状态每帧都会更新，这使得矮人能够实时响应游戏中的变化，如新掉落的资源、附近的怪物等。
+
+> 那你检查下，检查地面资源的逻辑有没有问题
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Match3Grid.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ Search(pattern: "getDroppedResources", path: "src")
+  ⎿  Found 2 files (ctrl+r to expand)
+
+⏺ Read(src/entities/Match3Grid.ts)
+  ⎿  Read 93 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 我发现了检查地面资源逻辑的一个潜在问题：
+
+  主要问题：资源的物理更新和矮人的资源检查存在时序问题
+
+  1. 资源还在掉落中就被认领：
+    - DroppedResource 在 update 方法中持续更新位置（有重力和反弹）
+    - 但矮人的 checkForResources 不检查资源是否已经落地稳定
+    - 矮人可能会追着还在空中或反弹的资源跑
+  2. 目标位置不会更新：
+    - 矮人在认领资源时记录了资源的位置：targetPosition: resourcePos
+    - 但资源可能还在移动（反弹效果），位置会变化
+    - 矮人移动到的是旧位置，可能错过资源
+
+  让我检查一下资源是否有落地状态：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 60 lines (ctrl+r to expand)
+
+⏺ 确实存在问题！主要问题如下：
+
+  1. 资源永远返回 true：DroppedResource.update() 方法最后总是返回
+  true，表示"继续更新"，即使资源已经完全静止了。
+  2. 矮人会追着移动的资源：
+    - 矮人在 checkForResources 时获取资源位置并设为目标
+    - 但资源可能还在反弹移动中
+    - 矮人到达目标位置时，资源可能已经弹到别处
+  3. 缺少"稳定"状态判断：
+    - 没有判断资源是否已经稳定（速度接近0）
+    - 矮人应该只捡拾已经稳定的资源
+
+  建议的修复方案：
+
+  1. 在 DroppedResource 中添加一个 isStable() 方法，判断资源是否已经稳定
+  2. 矮人只认领稳定的资源
+  3. 或者让矮人在收集时动态追踪资源位置，而不是固定目标位置
+
+  这些问题会导致矮人行为看起来不自然，可能会追着弹跳的资源跑，或者到达位置后发现资源不在那里。
+
+> 这是一部分问题，但是我发现有时候矮人会漏掉资源。明明地上还有，但矮人都待机
+
+⏺ Task(检查矮人漏掉资源的问题)
+  ⎿  Done (7 tool uses · 37.9k tokens · 1m 8.1s)                                                   
+
+⏺ 发现了问题的根源！矮人会漏掉资源的主要原因是：
+
+  1. checkForResources 只在矮人完全空闲时执行一次
+    - 如果此时没有资源或资源太远，矮人就会进入待机随机移动
+    - 之后即使有新资源掉落，矮人也不会再检查
+  2. 矮人在移动中不会检查资源
+  if (!this.currentTask && this.state === DwarfState.IDLE && !this.isMoving) {
+      this.updateIdleMovement(delta);
+  }
+  2. 一旦矮人开始随机移动，isMoving 变为 true，就不会再执行 checkForResources
+  3. DwarfManager 没有利用资源落地事件
+    - resource-landed 事件被触发了，但 DwarfManager 只是打印日志
+    - 应该主动给空闲矮人分配任务
+  4. 任务完成后的单次检查
+    - 矮人完成任务后只检查一次资源
+    - 如果没找到就进入待机状态，不会持续检查
+
+  这就解释了为什么会出现"地上有资源但矮人都在待机"的情况。矮人可能刚好在随机移动中，或者在完成任务
+  时没有检测到资源，之后就不再检查了。
+
+> 修改，应该是每帧都检查是否满足任务条件
+
+⏺ Update Todos
+  ⎿  ☐ 修改矮人资源检查逻辑，使其每帧都检查
+
+⏺ 我来修改矮人的资源检查逻辑，使其每帧都检查是否有可以捡拾的资源：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 9 additions and 9 removals                                 
+       281            // 1. 最高优先级：检查战斗
+       282            this.checkForCombat(delta);
+       283            
+       284 -          // 2. 如果没有当前任务，寻找新任务
+       285 -          if (!this.currentTask) {
+       286 -              // 先检查地上是否有资源
+       284 +          // 2. 
+     每帧都检查是否有资源可以捡拾（如果矮人没有携带资源且没有更高优先级任务）
+       285 +          if (!this.carryingResource && (!this.currentTask || this.currentTask.priority 
+     < TaskPriority.DELIVER_RESOURCE)) {
+           + < TaskPriority.DELIVER_RESOURCE)) {
+       286                this.checkForResources();
+       287 +          }
+       288 +          
+       289 +          // 3. 如果没有当前任务，检查其他任务来源
+       290 +          if (!this.currentTask) {
+       291 +              // 检查任务队列
+       292 +              this.checkTaskQueue();
+       293                
+       294 -              // 如果还是没有任务，检查任务队列
+       295 -              if (!this.currentTask) {
+       296 -                  this.checkTaskQueue();
+       297 -              }
+       298 -              
+       294                // 如果仍然没有任务，进入待机状态
+       295                if (!this.currentTask && this.state === DwarfState.IDLE && 
+     !this.isMoving)
+              {
+       296                    this.updateIdleMovement(delta);
+       297                }
+       298            }
+       299            
+       300 -          // 3. 处理当前任务
+       300 +          // 4. 处理当前任务
+       301            if (this.currentTask) {
+       302                this.processCurrentTask(delta);
+       303            }
+
+⏺ 现在我还需要修改 checkForResources 方法，使其能够中断低优先级任务：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 8 additions                                                
+       626                    const resourcePos = nearestResource.getPosition();
+       627                    console.log(`Dwarf ${this.id} claimed resource at (${resourcePos.x}, 
+             ${resourcePos.y})`);
+       628                    
+       629 +                  // 如果当前有任务，将其放回任务队列（如果是低优先级任务）
+       630 +                  if (this.currentTask && this.currentTask.priority < 
+           + TaskPriority.COLLECT_RESOURCE) {
+       631 +                      this.taskQueue.push(this.currentTask);
+       632 +                  }
+       633 +                  
+       634                    this.currentTask = {
+       635                        type: TaskType.COLLECT_RESOURCE,
+       636                        resourceType: nearestResource.getResourceType(),
+     ...
+       637                    this.state = DwarfState.WALKING;
+       638                    this.moveToTarget(resourcePos.x, resourcePos.y);
+       639                    this.updateStatusDisplay();
+       640 +                  
+       641 +                  // 重置空闲计时器
+       642 +                  this.idleTimer = 0;
+       643                }
+       644            }
+       645        }
+
+⏺ 现在我还需要添加一个方法来检查资源是否已经稳定，避免矮人追着还在弹跳的资源：
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 11 additions                
+       193        public getIsCollected(): boolean {
+       194            return this.isCollected;
+       195        }
+       196 +      
+       197 +      /**
+       198 +       * 检查资源是否已经稳定（停止移动）
+       199 +       */
+       200 +      public isStable(): boolean {
+       201 +          // 如果速度很小，认为资源已经稳定
+       202 +          const velocityThreshold = 10;
+       203 +          return Math.abs(this.velocity.x) < velocityThreshold && 
+       204 +                 Math.abs(this.velocity.y) < velocityThreshold &&
+       205 +                 this.hasLanded;
+       206 +      }
+       207    
+       208        /**
+       209         * 销毁资源
+
+⏺ 现在修改矮人的检查逻辑，只捡拾已经稳定的资源：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 1 addition and 1 removal                       
+       609            let minDistance = Infinity;
+       610            
+       611            for (const resource of droppedResources) {
+       612 -              if (!resource.getIsCollected() && !resource.isClaimed()) {
+       612 +              if (!resource.getIsCollected() && !resource.isClaimed() && 
+     resource.isStable()) {
+           + resource.isStable()) {
+       613                    const resourcePos = resource.getPosition();
+       614                    const distance = this.getDistanceToPoint(this.x, this.y, 
+             resourcePos.x, resourcePos.y);
+       615                    if (distance < minDistance) {
+
+⏺ Update Todos
+  ⎿  ☒ 修改矮人资源检查逻辑，使其每帧都检查
+
+⏺ 完成了修改！主要改动如下：
+
+  1. 每帧都检查资源：
+    - 现在只要矮人没有携带资源，且当前任务优先级低于送货任务，就会每帧检查地面资源
+    - 不再局限于"空闲且无任务"的条件
+  2. 可以中断低优先级任务：
+    - 如果发现资源，且当前任务优先级较低，会将当前任务放入队列
+    - 立即开始收集资源任务
+  3. 只捡拾稳定的资源：
+    - 添加了 isStable() 方法检查资源是否已经停止弹跳
+    - 矮人只会捡拾已经稳定的资源，避免追着弹跳的资源跑
+  4. 重置空闲计时器：
+    - 当找到资源时重置空闲计时器，避免立即进入随机移动
+
+  现在矮人应该不会再漏掉地面上的资源了，他们会持续扫描并及时捡拾稳定的资源。
+
+> 还是会遗漏，这就这么难吗？为什么每帧检查地面资源，总会漏掉一部分呢？这是什么原因？请你认真反思
+
+⏺ 你说得对，我需要认真反思这个问题。让我仔细分析代码逻辑：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 25 lines (ctrl+r to expand)
+
+⏺ 等等，我发现了一个严重的逻辑错误！
+
+  问题在第285行的条件判断：
+  if (!this.carryingResource && (!this.currentTask || this.currentTask.priority <
+  TaskPriority.DELIVER_RESOURCE)) {
+
+  这里比较的是 TaskPriority.DELIVER_RESOURCE（优先级2），但是我们要检查的是能否中断当前任务去捡资源
+  。让我看看优先级定义：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+⏺ 我找到根本问题了！
+
+  1. 优先级判断错误：
+    - COLLECT_RESOURCE 优先级是 1（最低）
+    - DELIVER_RESOURCE 优先级是 2
+    - 当矮人正在执行 DELIVER_RESOURCE（送货）任务时，条件 this.currentTask.priority < 
+  TaskPriority.DELIVER_RESOURCE 是 false（2 < 2 是假）
+    - 所以矮人在送货时不会检查新资源！
+  2. 矮人一旦捡起资源就会立即创建送货任务：
+    - 看第246-250行，捡到资源后立即创建 DELIVER_RESOURCE 任务
+    - 然后矮人去送货，这期间不会检查新资源
+    - 送完货后才会检查
+  3. 多个矮人的问题：
+    - 如果3个矮人都在送货路上，地面的新资源就没人捡
+    - 必须等到有矮人送完货才会去捡
+
+  让我修复这个逻辑错误：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 additions and 2 removals                                 
+       281            // 1. 最高优先级：检查战斗
+       282            this.checkForCombat(delta);
+       283            
+       284 -          // 2. 
+     每帧都检查是否有资源可以捡拾（如果矮人没有携带资源且没有更高优先级任务）
+       285 -          if (!this.carryingResource && (!this.currentTask || this.currentTask.priority 
+     < TaskPriority.DELIVER_RESOURCE)) {
+           - < TaskPriority.DELIVER_RESOURCE)) {
+       284 +          // 2. 每帧都检查是否有资源可以捡拾（如果矮人没有携带资源）
+       285 +          // 注意：只有在没有携带资源时才检查，避免矮人丢掉已经捡起的资源
+       286 +          if (!this.carryingResource) {
+       287                this.checkForResources();
+       288            }
+       289            
+
+⏺ 现在问题应该解决了！之前的错误是：
+
+  1. 条件判断错误导致矮人送货时不检查资源
+  2. 优先级比较逻辑有误
+
+  现在改为：只要矮人没有携带资源，就会每帧检查地面资源。这样即使所有矮人都在执行其他任务，只要他们
+  手上没有资源，就会持续扫描并捡拾新掉落的资源。
+
+> 还是不对。你把矮人状态机这块的逻辑给我详细讲一下，我来找找问题在哪
+
+⏺ 好的，我来详细分析矮人的状态机逻辑：
+
+  矮人状态机详细分析
+
+  1. 状态定义（4种状态）
+
+  export enum DwarfState {
+      IDLE = 'idle',           // 待机
+      WALKING = 'walking',     // 行走
+      FIGHTING = 'fighting',   // 战斗
+      BUILDING = 'building'    // 建造
+  }
+
+  2. 任务类型和优先级
+
+  export enum TaskType {
+      COLLECT_RESOURCE = 'collect_resource',   // 拣拾资源
+      DELIVER_RESOURCE = 'deliver_resource',   // 交付资源
+      BUILD_STRUCTURE = 'build_structure',     // 修建建筑
+      FIGHT = 'fight'                         // 战斗
+  }
+
+  export const TaskPriority = {
+      FIGHT: 4,           // 战斗最高优先级
+      BUILD_STRUCTURE: 3, // 修建次高
+      DELIVER_RESOURCE: 2,// 交付第三
+      COLLECT_RESOURCE: 1 // 拣拾最低
+  };
+
+  3. 核心更新流程 (update → updateTaskLogic)
+
+  每帧执行的逻辑顺序：
+
+  public update(delta: number): void {
+      if (this.isMoving) {
+          this.updateMovement(delta);  // 更新位置
+      }
+      this.updateTaskLogic(delta);     // 更新任务逻辑
+  }
+
+  4. updateTaskLogic 的执行顺序：
+
+  1. 检查战斗 (checkForCombat)
+    - 如果正在战斗，继续战斗
+    - 如果没在战斗，寻找附近怪物
+    - 找到怪物会创建 FIGHT 任务
+  2. 检查地面资源 (checkForResources)
+    - 条件：!this.carryingResource（没有携带资源）
+    - 找最近的未被收集、未被认领、已稳定的资源
+    - 如果找到，创建 COLLECT_RESOURCE 任务
+  3. 如果没有当前任务：
+    - 检查任务队列 (checkTaskQueue)
+    - 如果还是没任务，且状态为IDLE且不在移动，则随机移动
+  4. 处理当前任务 (processCurrentTask)
+
+  5. 关键的状态转换流程：
+
+  捡资源流程：
+
+  1. checkForResources 找到资源 → 创建 COLLECT_RESOURCE 任务
+  2. 状态变为 WALKING，移动到资源位置
+  3. 到达后 → handleCollectionAtTarget → 收集资源
+  4. 立即创建 DELIVER_RESOURCE 任务
+  5. 状态保持 WALKING，移动到城堡
+  6. 到达城堡 → depositResource → 交付资源
+  7. completeCurrentTask → 状态变为 IDLE，任务清空
+
+  6. 我发现的潜在问题：
+
+  1. 状态不一致：
+    - 矮人可能处于 WALKING 状态但 isMoving = false（已到达目标）
+    - 这时既不会更新移动，也可能错过某些检查
+  2. 任务完成时机：
+    - 矮人到达资源位置后，在 onReachedTarget 中处理
+    - 但这是在 updateMovement 中调用的
+    - 而 checkForResources 是在 updateTaskLogic 中
+    - 可能存在时序问题
+  3. 资源收集的具体逻辑：
+  private handleCollectionAtTarget(): void {
+      // 尝试收集资源
+      const collected = this.tryCollectResourceAtPosition();
+      if (collected) {
+          // 创建送货任务...
+      } else {
+          // 资源已被收集，完成任务
+          this.completeCurrentTask();
+      }
+  }
+  4. 可能的问题场景：
+    - 矮人A正在走向资源1
+    - 矮人B看到资源1已被认领，去找资源2
+    - 矮人A到达后发现资源1已被别人收集（？）
+    - 矮人A变为IDLE，但此时资源2已被B认领
+    - 结果：没人去捡新掉落的资源3
+  5. checkForResources 的限制：
+    - 只找最近的资源
+    - 如果最近的资源已被认领，不会找第二近的
+    - 每帧只尝试认领一个资源
+
+  你觉得问题可能在哪里？是不是多个矮人之间的协调有问题，或者是状态转换的时机不对？
+
+> 我观察到的现象是，每次掉落并稳定两个资源后，会有一个矮人进入拣拾，然后捡起并交付一个资源。但另一
+  个就无人问津。这是为什么？请你深思并分析
+
+✻ Thinking…
+
+  用户观察到的现象很具体：
+  1. 两个资源掉落并稳定
+  2. 一个矮人去捡拾其中一个
+  3. 该矮人完成整个流程（捡起→交付）
+  4. 另一个资源却无人问津
+
+  这说明问题不是"矮人看不到资源"，而是"矮人看到了但没去捡"。
+
+  让我分析可能的原因：
+
+  1. 认领机制问题？
+    - 不太可能，因为第二个资源没有被认领
+  2. 矮人数量问题？
+    - 代码中有3个矮人，应该足够
+  3. 任务分配逻辑？
+    - 每个矮人独立检查资源
+    - 找最近的未被认领的资源
+
+  等等！我想到了一个关键问题：
+
+  当矮人A捡起资源1后，会立即创建DELIVER_RESOURCE任务并去送货。在送货期间：
+  - 矮人A不会检查新资源（因为carryingResource = true）
+  - 矮人B和C呢？
+
+  如果矮人B和C也在忙（比如也在送货），那就没人去捡资源2了。
+
+  但用户说有3个矮人，不应该都在忙啊...
+
+  等等，我再看看checkForResources的逻辑...
+
+  啊！我想到了！问题可能是：
+  1. 资源1和资源2同时掉落
+  2. 三个矮人都执行checkForResources
+  3. 他们都找到"最近的"资源 - 可能都是资源1！
+
+  4. 只有一个矮人成功认领资源1
+  5. 其他两个矮人认领失败后，这一帧不再寻找第二近的资源
+  6. 下一帧，这两个矮人可能已转向其他任务
+
+  关键发现：checkForResources仅在成功认领资源时创建任务，认领失败则直接中断。这可能导致资源被忽视。
+
+⏺ 让我深入分析这个现象。你的观察非常关键：两个资源，只有一个被捡起。
+
+  我想我找到问题了！让我们跟踪一下具体的执行流程：
+
+  场景重现：
+
+  1. T0时刻：两个资源同时掉落并稳定
+  2. T1时刻：三个矮人都执行 checkForResources
+    - 所有矮人都找到"最近的"资源（假设是资源A）
+    - 三个矮人都尝试 claim 资源A
+    - 只有矮人1成功认领（claim 返回 true）
+    - 矮人2和矮人3认领失败（claim 返回 false）
+  3. 关键问题来了：
+  if (nearestResource.claim(this.id)) {
+      // 只有认领成功才创建任务
+      this.currentTask = {...};
+  }
+  // 认领失败的话，什么都不做！
+
+  4. T1时刻后：
+    - 矮人1：有任务了，去捡资源A
+    - 矮人2和3：认领失败，但这一帧不会再找其他资源！
+    - 资源B仍然躺在地上，未被认领
+  5. T2时刻：
+    - 矮人1：正在走向资源A
+    - 矮人2和3：再次执行 checkForResources
+    - 但这时他们可能已经开始随机移动，或者离资源B更远了
+    - 或者，他们还是找"最近的"，如果资源A还没被收集，他们还是会尝试认领已被认领的资源A！
+
+  根本原因：
+
+  checkForResources 的逻辑有缺陷：
+  1. 只找最近的一个资源
+  2. 如果认领失败，不会尝试找第二近的资源
+  3. 多个矮人可能都盯着同一个资源
+
+  解决方案：
+
+  修改 checkForResources，让它在认领失败时继续尝试其他资源：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 16 additions and 13 removals                               
+       605            
+       606            const droppedResources = match3Grid.getDroppedResources();
+       607            
+       608 -          // 找到最近的未被收集且未被认领的资源
+       609 -          let nearestResource = null;
+       610 -          let minDistance = Infinity;
+       608 +          // 收集所有可用的资源并按距离排序
+       609 +          const availableResources: { resource: any; distance: number }[] = [];
+       610            
+       611            for (const resource of droppedResources) {
+       612                if (!resource.getIsCollected() && !resource.isClaimed() && 
+             resource.isStable()) {
+       613                    const resourcePos = resource.getPosition();
+       614                    const distance = this.getDistanceToPoint(this.x, this.y, 
+             resourcePos.x, resourcePos.y);
+       615 -                  if (distance < minDistance) {
+       616 -                      minDistance = distance;
+       617 -                      nearestResource = resource;
+       618 -                  }
+       615 +                  availableResources.push({ resource, distance });
+       616                }
+       617            }
+       618            
+       619 -          // 如果找到资源，尝试认领并创建收集任务
+       620 -          if (nearestResource) {
+       619 +          // 按距离排序
+       620 +          availableResources.sort((a, b) => a.distance - b.distance);
+       621 +          
+       622 +          // 尝试认领资源，从最近的开始
+       623 +          for (const { resource } of availableResources) {
+       624                // 尝试认领资源
+       625 -              if (nearestResource.claim(this.id)) {
+       626 -                  const resourcePos = nearestResource.getPosition();
+       625 +              if (resource.claim(this.id)) {
+       626 +                  const resourcePos = resource.getPosition();
+       627                    console.log(`Dwarf ${this.id} claimed resource at (${resourcePos.x}, 
+             ${resourcePos.y})`);
+       628                    
+       629                    // 如果当前有任务，将其放回任务队列（如果是低优先级任务）
+     ...
+       634                    
+       635                    this.currentTask = {
+       636                        type: TaskType.COLLECT_RESOURCE,
+       637 -                      resourceType: nearestResource.getResourceType(),
+       637 +                      resourceType: resource.getResourceType(),
+       638                        targetPosition: resourcePos,
+       639                        priority: TaskPriority.COLLECT_RESOURCE,
+       640 -                      target: nearestResource // 保存资源引用
+       640 +                      target: resource // 保存资源引用
+       641                    };
+       642                    
+       643                    this.state = DwarfState.WALKING;
+     ...
+       646                    
+       647                    // 重置空闲计时器
+       648                    this.idleTimer = 0;
+       649 +                  
+       650 +                  // 成功认领后立即返回
+       651 +                  return;
+       652                }
+       653 +              // 如果认领失败，继续尝试下一个资源
+       654            }
+       655        }
+       656    
+
+✻ Thinking…
+
+  现在我已经修改了checkForResources方法，使其能够：
+  1. 收集所有可用资源
+  2. 按距离排序
+  3. 从最近的开始尝试认领
+  4. 如果认领失败，继续尝试下一个
+
+  这应该解决了用户观察到的问题：当多个矮人同时看到两个资源时，即使他们都先尝试认领同一个资源，失败
+  的矮人会继续尝试认领第二个资源。
+
+  这样就不会出现"一个资源被捡起，另一个无人问津"的情况了。
+
+⏺ 找到问题了！正是我分析的那样：
+
+  问题根源：当两个资源同时存在时，所有矮人都会找"最近的"那个资源，但只有一个矮人能成功认领。其他矮
+  人认领失败后，不会去尝试第二近的资源，导致另一个资源无人问津。
+
+  我已经修复了这个问题：
+
+  1. 现在 checkForResources 会收集所有可用资源
+  2. 按距离排序
+  3. 从最近的开始尝试认领
+  4. 如果认领失败，会继续尝试下一个资源
+  5. 直到成功认领一个资源或所有资源都尝试过
+
+  这样，即使三个矮人都先尝试认领资源A，失败的两个矮人会继续尝试认领资源B，确保所有资源都能被及时捡
+  起。
+
+  现在的执行流程：
+  - 矮人1尝试资源A → 成功 → 去捡资源A
+  - 矮人2尝试资源A → 失败 → 尝试资源B → 成功 → 去捡资源B
+  - 矮人3尝试资源A → 失败 → 尝试资源B → 失败（已被矮人2认领）→ 保持空闲
+
+  这应该能解决你观察到的问题了！
+
+> 仍然有一样的现象，要不你给关键节点打上log，然后看log吧
+
+⏺ 你说得对，我们需要通过日志来精确定位问题。让我在关键节点添加详细的日志：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 4 additions                                                
+       285            // 注意：只有在没有携带资源时才检查，避免矮人丢掉已经捡起的资源
+       286            if (!this.carryingResource) {
+       287                this.checkForResources();
+       288 +          } else {
+       289 +              // 日志：矮人正在携带资源
+       290 +              console.log(`[Dwarf ${this.id}] 正在携带 
+           + ${this.carryingResource}，跳过资源检查`);
+       291            }
+       292            
+       293            // 3. 如果没有当前任务，检查其他任务来源
+       294            if (!this.currentTask) {
+       295 +              console.log(`[Dwarf ${this.id}] 没有当前任务，状态: ${this.state}, 
+     移动中:
+           +  ${this.isMoving}`);
+       296                // 检查任务队列
+       297                this.checkTaskQueue();
+       298                
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 23 additions and 5 removals                                
+       608            if (!match3Grid) return;
+       609            
+       610            const droppedResources = match3Grid.getDroppedResources();
+       611 +          console.log(`[Dwarf ${this.id}] 检查资源，总数: ${droppedResources.length}`);
+       612            
+       613            // 收集所有可用的资源并按距离排序
+       614            const availableResources: { resource: any; distance: number }[] = [];
+       615            
+       616            for (const resource of droppedResources) {
+       617 -              if (!resource.getIsCollected() && !resource.isClaimed() && 
+     resource.isStable()) {
+           - resource.isStable()) {
+       618 -                  const resourcePos = resource.getPosition();
+       617 +              const isCollected = resource.getIsCollected();
+       618 +              const isClaimed = resource.isClaimed();
+       619 +              const isStable = resource.isStable();
+       620 +              const resourcePos = resource.getPosition();
+       621 +              
+       622 +              console.log(`[Dwarf ${this.id}] 资源检查 - 位置:(${resourcePos.x}, 
+           + ${resourcePos.y}), 已收集:${isCollected}, 已认领:${isClaimed}, 稳定:${isStable}`);
+       623 +              
+       624 +              if (!isCollected && !isClaimed && isStable) {
+       625                    const distance = this.getDistanceToPoint(this.x, this.y, 
+             resourcePos.x, resourcePos.y);
+       626                    availableResources.push({ resource, distance });
+       627 +                  console.log(`[Dwarf ${this.id}] 可用资源，距离: ${distance}`);
+       628                }
+       629            }
+       630            
+       631 +          console.log(`[Dwarf ${this.id}] 找到 ${availableResources.length} 
+           + 个可用资源`);
+       632 +          
+       633            // 按距离排序
+       634            availableResources.sort((a, b) => a.distance - b.distance);
+       635            
+       636            // 尝试认领资源，从最近的开始
+       637 -          for (const { resource } of availableResources) {
+       637 +          for (const { resource, distance } of availableResources) {
+       638 +              const resourcePos = resource.getPosition();
+       639 +              console.log(`[Dwarf ${this.id}] 尝试认领资源 at (${resourcePos.x}, 
+           + ${resourcePos.y}), 距离: ${distance}`);
+       640 +              
+       641                // 尝试认领资源
+       642                if (resource.claim(this.id)) {
+       643 -                  const resourcePos = resource.getPosition();
+       644 -                  console.log(`Dwarf ${this.id} claimed resource at (${resourcePos.x}, 
+           - ${resourcePos.y})`);
+       643 +                  console.log(`[Dwarf ${this.id}] 成功认领资源 at (${resourcePos.x}, 
+     ${resourcePos.y})`);
+           + ${resourcePos.y})`);
+       644                    
+       645                    // 如果当前有任务，将其放回任务队列（如果是低优先级任务）
+       646                    if (this.currentTask && this.currentTask.priority < 
+             TaskPriority.COLLECT_RESOURCE) {
+     ...
+       652                    
+       653                    // 成功认领后立即返回
+       654                    return;
+       655 +              } else {
+       656 +                  console.log(`[Dwarf ${this.id}] 认领失败，继续尝试下一个`);
+       657                }
+       658                // 如果认领失败，继续尝试下一个资源
+       659            }
+       660 +          
+       661 +          if (availableResources.length === 0) {
+       662 +              console.log(`[Dwarf ${this.id}] 没有找到可用资源`);
+       663 +          }
+       664        }
+       665    
+       666        /**
+
+⏺ 现在让我们在资源掉落和稳定的地方也加上日志：
+
+⏺ Update(src/entities/Match3Grid.ts)
+  ⎿  Updated src/entities/Match3Grid.ts with 2 additions                    
+       445                
+       446                if (!stillFalling && !resource.getIsCollected()) {
+       447                    // 资源已落地，通知事件系统
+       448 +                  const pos = resource.getPosition();
+       449 +                  console.log(`[Match3Grid] 资源落地 - 类型: 
+           + ${resource.getResourceType()}, 位置: (${pos.x}, ${pos.y})`);
+       450                    this.scene.events.emit('resource-landed', {
+       451                        resourceType: resource.getResourceType(),
+       452                        position: resource.getPosition(),
+
+⏺ 还需要在资源创建时添加日志：
+
+⏺ Search(pattern: "new DroppedResource", path: "src")
+  ⎿  Found 1 file (ctrl+r to expand)
+
+⏺ Read(src/entities/Match3Grid.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Match3Grid.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Match3Grid.ts)
+  ⎿  Read 35 lines (ctrl+r to expand)
+
+⏺ 让我添加更详细的日志到资源创建部分：
+
+⏺ Update(src/entities/Match3Grid.ts)
+  ⎿  Updated src/entities/Match3Grid.ts with 3 additions and 1 removal                          
+       289                cell1.resourceType
+       290            );
+       291            this.droppedResources.push(resource1);
+       292 +          console.log(`[Match3Grid] 创建资源1 - 类型: ${cell1.resourceType}, 位置: 
+           + (${pos1.x + this.CELL_SIZE / 2}, ${pos1.y + this.CELL_SIZE / 2})`);
+       293            
+       294            // 第二个资源
+       295            const resource2 = new DroppedResource(
+     ...
+       298                cell2.resourceType
+       299            );
+       300            this.droppedResources.push(resource2);
+       301 +          console.log(`[Match3Grid] 创建资源2 - 类型: ${cell2.resourceType}, 位置: 
+           + (${pos2.x + this.CELL_SIZE / 2}, ${pos2.y + this.CELL_SIZE / 2})`);
+       302            
+       303 -          console.log(`Created 2 dropped resources from eliminated cells`);
+       303 +          console.log(`[Match3Grid] 当前资源总数: ${this.droppedResources.length}`);
+       304        }
+       305    
+       306        /**
+
+⏺ 现在让我们减少一些重复的日志，只保留关键信息：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 removals                                   
+       285            // 注意：只有在没有携带资源时才检查，避免矮人丢掉已经捡起的资源
+       286            if (!this.carryingResource) {
+       287                this.checkForResources();
+       288 -          } else {
+       289 -              // 日志：矮人正在携带资源
+       290 -              console.log(`[Dwarf ${this.id}] 正在携带 
+           - ${this.carryingResource}，跳过资源检查`);
+       288            }
+       289            
+       290            // 3. 如果没有当前任务，检查其他任务来源
+
+⏺ 好了，现在日志系统已经设置好了。主要的日志点包括：
+
+  1. 资源创建时：记录资源类型和位置
+  2. 资源落地时：记录资源已经稳定
+  3. 矮人检查资源时：
+    - 显示总资源数
+    - 每个资源的状态（已收集、已认领、是否稳定）
+    - 找到的可用资源数量
+    - 尝试认领的过程
+  4. 矮人状态：当矮人没有任务时的状态
+
+  现在你可以运行游戏，消除一对方块让两个资源掉落，然后观察控制台日志。日志会告诉我们：
+  - 资源是否都被创建了
+  - 资源是否都稳定了
+  - 矮人是否检查到了这些资源
+  - 为什么第二个资源没有被捡起
+
+  通过这些日志，我们应该能准确定位问题所在。
+
+> Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(698.1314456873874, 319.72151168), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(698.1435299578764, 370.72151168), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.7617839399413, 320.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.7859887918281, 371.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.7617839399413, 320.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.7859887918281, 371.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.7617839399413, 320.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.7859887918281, 371.16653384), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.3923436794619, 320.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.4286618505648, 371.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.3923436794619, 320.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.4286618505648, 371.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.3923436794619, 320.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.4286618505648, 371.83386728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到我给你截取了一些，1你看看
+
+⏺ 找到问题了！从日志中可以清楚看到：
+
+  两个资源都是 稳定:false
+
+  所有矮人都检测到了2个资源，但是因为资源还在弹跳中（稳定:false），所以都被过滤掉了：
+
+  资源检查 - 位置:(697.3923436794619, 320.83386728), 已收集:false, 已认领:false, 稳定:false
+  资源检查 - 位置:(697.4286618505648, 371.83386728), 已收集:false, 已认领:false, 稳定:false
+  找到 0 个可用资源
+
+  问题出在 isStable() 方法的判断条件可能太严格了。让我检查一下：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+⏺ 看看资源的弹跳逻辑：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 25 lines (ctrl+r to expand)
+  ⎿  Interrupted by user
+
+> [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.0235678798825, 321.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(697.0719775836562, 372.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.0235678798825, 321.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(697.0719775836562, 372.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.0235678798825, 321.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(697.0719775836562, 372.72177848), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(696.6547920803032, 322.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(696.7152933167476, 373.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(696.6547920803032, 322.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(696.7152933167476, 373.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(696.6547920803032, 322.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(696.7152933167476, 373.83146768), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(696.2871237155574, 324.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(696.3596801737638, 375.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(696.2871237155574, 324.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(696.3596801737638, 375.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(696.2871237155574, 324.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(696.3596801737638, 375.15827248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(695.917683455078, 325.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(696.0023532325005, 376.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(695.917683455078, 325.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(696.0023532325005, 376.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(695.917683455078, 325.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(696.0023532325005, 376.71404944), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(695.5484646815652, 327.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(695.6452405160221, 378.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(695.5484646815652, 327.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(695.6452405160221, 378.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(695.5484646815652, 327.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(695.6452405160221, 378.4912048), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(695.1770310383853, 329.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(695.2859855516945, 380.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(695.1770310383853, 329.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(695.2859855516945, 380.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(695.1770310383853, 329.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(695.2859855516945, 380.50400728), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.8067048300389, 331.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.9278017112914, 382.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.8067048300389, 331.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.9278017112914, 382.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.8067048300389, 331.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.9278017112914, 382.73445528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.4370430825928, 334.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.5702605452432, 385.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.4370430825928, 334.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.5702605452432, 385.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.4370430825928, 334.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.5702605452432, 385.18374616), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.0689317439136, 336.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(694.2142189526894, 387.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.0689317439136, 336.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(694.2142189526894, 387.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.0689317439136, 336.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(694.2142189526894, 387.84374392), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(693.6994914834341, 339.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(693.8568920114261, 390.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(693.6994914834341, 339.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(693.8568920114261, 390.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(693.6994914834341, 339.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(693.8568920114261, 390.73592248), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(693.3309371708216, 342.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(693.5004219693025, 393.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(693.3309371708216, 342.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(693.5004219693025, 393.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(693.3309371708216, 342.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(693.5004219693025, 393.84267704), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.9621613712422, 346.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(693.1437377023939, 397.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.9621613712422, 346.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(693.1437377023939, 397.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.9621613712422, 346.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(693.1437377023939, 397.17307664000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.5922781368293, 349.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.7859823115607, 400.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.5922781368293, 349.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.7859823115607, 400.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.5922781368293, 349.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.7859823115607, 400.73658944000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.2243882851169, 353.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.4301549437919, 404.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.2243882851169, 353.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.4301549437919, 404.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.2243882851169, 353.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.4301549437919, 404.5016113600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.8549480246375, 357.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(692.0728280025286, 408.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.8549480246375, 357.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(692.0728280025286, 408.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.8549480246375, 357.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(692.0728280025286, 408.50507824000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.4879441207919, 361.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.7178575338995, 412.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.4879441207919, 361.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.7178575338995, 412.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.4879441207919, 361.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.7178575338995, 412.70179528), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.1182823733458, 366.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.3603163678513, 417.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.1182823733458, 366.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.3603163678513, 417.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.1182823733458, 366.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.3603163678513, 417.15174984), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(690.7501710346666, 370.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(691.0042747752975, 421.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(690.7501710346666, 370.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(691.0042747752975, 421.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(690.7501710346666, 370.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(691.0042747752975, 421.80402024), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(690.3802878002537, 375.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(690.6465193844643, 426.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(690.3802878002537, 375.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(690.6465193844643, 426.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(690.3802878002537, 375.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(690.6465193844643, 426.70179624), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(690.0123979485412, 380.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(690.2906920166955, 431.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(690.0123979485412, 380.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(690.2906920166955, 431.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(690.0123979485412, 380.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(690.2906920166955, 431.79389072000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(689.6420717401949, 386.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(689.9325081762925, 437.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(689.6420717401949, 386.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(689.9325081762925, 437.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(689.6420717401949, 386.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(689.9325081762925, 437.1433544000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(689.2719670188153, 391.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(689.5745385606743, 442.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(689.2719670188153, 391.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(689.5745385606743, 442.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(689.2719670188153, 391.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(689.5745385606743, 442.7129979200001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.9042986540695, 397.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(689.2189254176905, 448.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.9042986540695, 397.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(689.2189254176905, 448.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.9042986540695, 397.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(689.2189254176905, 448.46642512000005), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.5344154196566, 403.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.8611700268573, 454.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.5344154196566, 403.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.8611700268573, 454.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.5344154196566, 403.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.8611700268573, 454.47762352000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.1665255679442, 409.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.5053426590885, 460.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.1665255679442, 409.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.5053426590885, 460.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.1665255679442, 409.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.5053426590885, 460.67713992000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.7953134117311, 416.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(688.1463019195457, 467.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.7953134117311, 416.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(688.1463019195457, 467.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.7953134117311, 416.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(688.1463019195457, 467.1573604000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.4265376121517, 422.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.7896176526372, 473.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.4265376121517, 422.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.7896176526372, 473.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.4265376121517, 422.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.7896176526372, 473.81682760000007), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.0566543777388, 429.7194052000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.431862261804, 480.7194052000001), 已收集:false,
+   已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.0566543777388, 429.7194052000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.431862261804, 480.7194052000001), 已收集:false,
+   已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.0566543777388, 429.7194052000001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.431862261804, 480.7194052000001), 已收集:false,
+   已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(686.6872141172594, 436.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(687.0745353205407, 487.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(686.6872141172594, 436.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(687.0745353205407, 487.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(686.6872141172594, 436.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(687.0745353205407, 487.8362941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(686.3182168307134, 444.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(686.7176368288473, 495.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(686.3182168307134, 444.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(686.7176368288473, 495.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(686.3182168307134, 444.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(686.7176368288473, 495.1666941600001), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(685.9496625181008, 451.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(686.3611667867236, 502.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(685.9496625181008, 451.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(686.3611667867236, 502.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(685.9496625181008, 451.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(686.3611667867236, 502.70980584000006), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(685.5811082054882, 459.47442920000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(686.0046967446, 510.47442920000003), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(685.5811082054882, 459.47442920000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(686.0046967446, 510.47442920000003), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(685.5811082054882, 459.47442920000003), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(686.0046967446, 510.47442920000003), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(685.2121109189422, 467.47042952000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(685.6477982529066, 518.47042952), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(685.2121109189422, 467.47042952000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(685.6477982529066, 518.47042952), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(685.2121109189422, 467.47042952000004), 
+  已收集:false, 已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(685.6477982529066, 518.47042952), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.8426706584628, 475.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(685.2904713116433, 526.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.8426706584628, 475.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(685.2904713116433, 526.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.8426706584628, 475.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(685.2904713116433, 526.6986068), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.4738948588835, 484.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.9337870447347, 535.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.4738948588835, 484.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.9337870447347, 535.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.4738948588835, 484.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.9337870447347, 535.1337632), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.106005007171, 492.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.5779596769659, 543.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.106005007171, 492.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.5779596769659, 543.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.106005007171, 492.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.5779596769659, 543.76936864), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(683.737007720625, 501.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(684.2210611852724, 552.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(683.737007720625, 501.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(684.2210611852724, 552.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(683.737007720625, 501.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(684.2210611852724, 552.65301376), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(683.3684534080124, 510.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(683.8645911431488, 561.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(683.3684534080124, 510.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(683.8645911431488, 561.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(683.3684534080124, 510.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(683.8645911431488, 561.74750592), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(682.9992346344997, 520.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(683.5074784266704, 571.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: true
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(682.9992346344997, 520.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(683.5074784266704, 571.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(682.9992346344997, 520.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(683.5074784266704, 571.08070552), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(682.6286869391867, 529.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(683.1490803614824, 580.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_1] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_2] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(682.6286869391867, 529.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_2] 资源检查 - 位置:(683.1490803614824, 580.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_2] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_2] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_2] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_3] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(682.6286869391867, 529.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_3] 资源检查 - 位置:(683.1490803614824, 580.67141224), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_3] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_3] 没有找到可用资源
+  Dwarf.ts:292 [Dwarf dwarf_3] 没有当前任务，状态: idle, 移动中: false
+  Dwarf.ts:608 [Dwarf dwarf_1] 检查资源，总数: 2
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(682.2612400614076, 539.40204448), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:619 [Dwarf dwarf_1] 资源检查 - 位置:(682.7936814432835, 590.40204448), 已收集:false, 
+  已认领:false, 稳定:false
+  Dwarf.ts:628 [Dwarf dwarf_1] 找到 0 个可用资源
+  Dwarf.ts:671 [Dwarf dwarf_1] 没有找到可用资源
+  Dwarf.ts:292 我又给你补充了一部分，你再看看
+
+⏺ 看了日志，问题非常清楚了：资源永远不会变成稳定状态！
+
+  从日志中可以看到：
+  - 两个资源持续很长时间都是 稳定:false
+  - 资源的位置在持续微小变化（说明还在运动）
+  - 矮人检测到资源但因为不稳定而无法捡拾
+
+  问题出在物理系统的实现上。让我检查一下资源的物理更新逻辑：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+⏺ 找到问题了！在第84行，即使垂直速度为0了，水平速度还在以0.9的系数衰减。但是：
+
+  1. 水平速度永远不会真正停止：
+    - this.velocity.x *= 0.9 会让速度越来越小，但永远不会精确等于0
+    - 比如：10 → 9 → 8.1 → 7.29 → 6.561 → 5.9049 → ...
+    - 即使到了很小的值如0.001，乘以0.9后还是0.0009，永远不为0
+  2. isStable() 的判断条件：
+    - 要求 Math.abs(this.velocity.x) < velocityThreshold
+    - 但因为速度永远在衰减但不会停止，可能永远达不到阈值
+
+  让我添加日志来验证速度值：
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 8 additions and 1 removal                        
+       200        public isStable(): boolean {
+       201            // 如果速度很小，认为资源已经稳定
+       202            const velocityThreshold = 10;
+       203 -          return Math.abs(this.velocity.x) < velocityThreshold && 
+       203 +          const stable = Math.abs(this.velocity.x) < velocityThreshold && 
+       204                   Math.abs(this.velocity.y) < velocityThreshold &&
+       205                   this.hasLanded;
+       206 +          
+       207 +          // 调试日志
+       208 +          if (!stable && this.hasLanded) {
+       209 +              console.log(`[DroppedResource] 不稳定 - vx: 
+     ${this.velocity.x.toFixed(4)},
+           +  vy: ${this.velocity.y.toFixed(4)}, 已落地: ${this.hasLanded}`);
+       210 +          }
+       211 +          
+       212 +          return stable;
+       213        }
+       214    
+       215        /**
+
+⏺ 等等，我发现了更大的问题！看构造函数：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 15 lines (ctrl+r to expand)
+
+⏺ 看第70行的条件：
+
+⏺ Read(src/entities/DroppedResource.ts)
+  ⎿  Read 5 lines (ctrl+r to expand)
+
+⏺ 问题找到了！反弹逻辑有问题：
+
+  1. 第70行：if (!this.hasLanded || Math.abs(this.velocity.y) > 50)
+    - 即使 hasLanded 为 true，只要垂直速度大于50，还会继续反弹
+    - 但是 this.velocity.y = -this.bounceVelocity 会设置一个很大的反弹速度（300-500）
+    - 这导致资源会一直弹跳！
+  2. bounceVelocity 初始值太大（300-500），而且每次都用这个值的负数作为新的垂直速度
+
+  让我修复这个物理系统：
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 13 additions and 14 removals                   
+       67                this.sprite.setY(this.targetY);
+       68                
+       69                // 反弹效果
+       70 -              if (!this.hasLanded || Math.abs(this.velocity.y) > 50) {
+       71 -                  this.velocity.y = -this.bounceVelocity;
+       72 -                  this.bounceVelocity *= this.bounceDecay; // 每次反弹衰减
+       73 -                  
+       74 -                  // 增加一些随机性
+       75 -                  this.velocity.x = (Math.random() - 0.5) * 50;
+       76 -                  
+       77 -                  // 第一次落地
+       78 -                  if (!this.hasLanded) {
+       79 -                      this.hasLanded = true;
+       80 -                  }
+       70 +              if (!this.hasLanded) {
+       71 +                  // 第一次落地，产生反弹
+       72 +                  this.velocity.y = -Math.abs(this.velocity.y) * this.bounceDecay; // 
+     使用当前速度的一部分反弹
+          + 使用当前速度的一部分反弹
+       73 +                  this.velocity.x = (Math.random() - 0.5) * 30; // 较小的随机水平速度
+       74 +                  this.hasLanded = true;
+       75 +              } else if (Math.abs(this.velocity.y) > 50) {
+       76 +                  // 后续反弹
+       77 +                  this.velocity.y = -Math.abs(this.velocity.y) * this.bounceDecay;
+       78 +                  this.velocity.x *= 0.8; // 水平速度也衰减
+       79                } else {
+       80 -                  // 停止运动
+       80 +                  // 停止垂直运动
+       81                    this.velocity.y = 0;
+       82 -                  this.velocity.x *= 0.9; // 水平速度逐渐减小
+       82 +                  // 水平速度快速衰减
+       83 +                  this.velocity.x *= 0.8;
+       84                    
+       85                    // 如果速度很小，完全停止
+       86 -                  if (Math.abs(this.velocity.x) < 1) {
+       86 +                  if (Math.abs(this.velocity.x) < 2) {
+       87                        this.velocity.x = 0;
+       88                    }
+       89                }
+
+⏺ 现在我还需要移除不再使用的 bounceVelocity 初始化，并调整稳定性判断的阈值：
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 2 additions and 3 removals              
+       37            
+       38            // 初始化物理属性
+       39            this.velocity = {
+       40 -              x: (Math.random() - 0.5) * 100, // 随机水平速度 (-50 到 50)
+       40 +              x: (Math.random() - 0.5) * 50, // 较小的随机水平速度 (-25 到 25)
+       41                y: 0 // 初始垂直速度为0
+       42            };
+       43            
+       44 -          // 随机初始反弹速度
+       45 -          this.bounceVelocity = Math.random() * 200 + 300; // 300-500的反弹速度
+       44 +          // 不再需要固定的反弹速度，使用物理计算
+       45        }
+       46    
+       47        /**
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 1 addition and 2 removals
+        9        private targetY: number;
+       10        private velocity: { x: number; y: number };
+       11        private gravity: number = 800; // 重力加速度 (像素/秒²)
+       12 -      private bounceVelocity: number = 0;
+       13 -      private bounceDecay: number = 0.6; // 反弹衰减系数
+       12 +      private bounceDecay: number = 0.5; // 反弹衰减系数
+       13        private isCollected: boolean = false;
+       14        private claimedBy: string | null = null; // 被哪个矮人认领
+       15        private hasLanded: boolean = false;
+
+⏺ Update(src/entities/DroppedResource.ts)
+  ⎿  Updated src/entities/DroppedResource.ts with 1 addition and 6 removals                        
+       196         */
+       197        public isStable(): boolean {
+       198            // 如果速度很小，认为资源已经稳定
+       199 -          const velocityThreshold = 10;
+       199 +          const velocityThreshold = 5; // 降低阈值
+       200            const stable = Math.abs(this.velocity.x) < velocityThreshold && 
+       201                   Math.abs(this.velocity.y) < velocityThreshold &&
+       202                   this.hasLanded;
+       203            
+       204 -          // 调试日志
+       205 -          if (!stable && this.hasLanded) {
+       206 -              console.log(`[DroppedResource] 不稳定 - vx: 
+     ${this.velocity.x.toFixed(4)},
+           -  vy: ${this.velocity.y.toFixed(4)}, 已落地: ${this.hasLanded}`);
+       207 -          }
+       208 -          
+       204            return stable;
+       205        }
+       206    
+
+⏺ 现在让我们减少矮人的日志输出，专注于关键信息：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 5 additions and 12 removals                                
+       605            if (!match3Grid) return;
+       606            
+       607            const droppedResources = match3Grid.getDroppedResources();
+       608 -          console.log(`[Dwarf ${this.id}] 检查资源，总数: ${droppedResources.length}`);
+       609 -          
+       608            // 收集所有可用的资源并按距离排序
+       609            const availableResources: { resource: any; distance: number }[] = [];
+       610            
+       611            for (const resource of droppedResources) {
+       612 -              const isCollected = resource.getIsCollected();
+       613 -              const isClaimed = resource.isClaimed();
+       614 -              const isStable = resource.isStable();
+       615 -              const resourcePos = resource.getPosition();
+       616 -              
+       617 -              console.log(`[Dwarf ${this.id}] 资源检查 - 位置:(${resourcePos.x}, 
+           - ${resourcePos.y}), 已收集:${isCollected}, 已认领:${isClaimed}, 稳定:${isStable}`);
+       618 -              
+       619 -              if (!isCollected && !isClaimed && isStable) {
+       612 +              if (!resource.getIsCollected() && !resource.isClaimed() && 
+     resource.isStable()) {
+           + resource.isStable()) {
+       613 +                  const resourcePos = resource.getPosition();
+       614                    const distance = this.getDistanceToPoint(this.x, this.y, 
+             resourcePos.x, resourcePos.y);
+       615                    availableResources.push({ resource, distance });
+       616 -                  console.log(`[Dwarf ${this.id}] 可用资源，距离: ${distance}`);
+       616                }
+       617            }
+       618            
+       619 -          console.log(`[Dwarf ${this.id}] 找到 ${availableResources.length} 
+     个可用资源`);
+           - 个可用资源`);
+       619 +          if (availableResources.length > 0) {
+       620 +              console.log(`[Dwarf ${this.id}] 找到 ${availableResources.length} 
+           + 个可用资源`);
+       621 +          }
+       622            
+       623            // 按距离排序
+       624            availableResources.sort((a, b) => a.distance - b.distance);
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 1 addition and 9 removals                                
+       625            
+       626            // 尝试认领资源，从最近的开始
+       627            for (const { resource, distance } of availableResources) {
+       628 -              const resourcePos = resource.getPosition();
+       629 -              console.log(`[Dwarf ${this.id}] 尝试认领资源 at (${resourcePos.x}, 
+           - ${resourcePos.y}), 距离: ${distance}`);
+       630 -              
+       628                // 尝试认领资源
+       629                if (resource.claim(this.id)) {
+       630 +                  const resourcePos = resource.getPosition();
+       631                    console.log(`[Dwarf ${this.id}] 成功认领资源 at (${resourcePos.x}, 
+             ${resourcePos.y})`);
+       632                    
+       633                    // 如果当前有任务，将其放回任务队列（如果是低优先级任务）
+     ...
+       654                    
+       655                    // 成功认领后立即返回
+       656                    return;
+       657 -              } else {
+       658 -                  console.log(`[Dwarf ${this.id}] 认领失败，继续尝试下一个`);
+       657                }
+       658                // 如果认领失败，继续尝试下一个资源
+       659            }
+       660 -          
+       661 -          if (availableResources.length === 0) {
+       662 -              console.log(`[Dwarf ${this.id}] 没有找到可用资源`);
+       663 -          }
+       660        }
+       661    
+       662        /**
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 1 removal                                                  
+       289            
+       290            // 3. 如果没有当前任务，检查其他任务来源
+       291            if (!this.currentTask) {
+       292 -              console.log(`[Dwarf ${this.id}] 没有当前任务，状态: ${this.state}, 
+     移动中:
+           -  ${this.isMoving}`);
+       292                // 检查任务队列
+       293                this.checkTaskQueue();
+       294                
+
+⏺ 总结一下我修复的问题：
+
+  1. 物理系统的根本问题：
+    - 原来使用固定的大反弹速度（300-500），导致资源一直弹跳
+    - 现在改为使用当前速度的衰减系数来计算反弹速度
+    - 修复了水平速度永远不会停止的问题（将阈值从1提高到2）
+  2. 反弹逻辑优化：
+    - 第一次落地：使用当前垂直速度 * 0.5 作为反弹速度
+    - 后续反弹：只有垂直速度大于50时才反弹
+    - 水平速度衰减更快（0.8而不是0.9）
+  3. 稳定性判断：
+    - 将速度阈值从10降低到5
+    - 移除了调试日志避免刷屏
+
+  现在资源应该会：
+  1. 掉落后弹跳1-2次
+  2. 快速稳定下来
+  3. 矮人能够检测到稳定的资源并捡拾
+
