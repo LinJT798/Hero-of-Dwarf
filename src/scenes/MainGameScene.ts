@@ -29,6 +29,7 @@ export class MainGameScene extends Scene {
     private match3Container!: Phaser.GameObjects.Container;
     private shopContainer!: Phaser.GameObjects.Container;
     private groundContainer!: Phaser.GameObjects.Container;
+    private topLayerContainer!: Phaser.GameObjects.Container;  // 顶层容器，用于掉落资源
     
     // 资源显示
     private resourceDisplays: Map<string, Phaser.GameObjects.Text> = new Map();
@@ -106,6 +107,10 @@ export class MainGameScene extends Scene {
         // 创建背景
         this.createBackground();
         
+        // 创建顶层容器（必须在创建游戏区域之前，以便Match3System可以使用）
+        this.topLayerContainer = this.add.container(0, 0);
+        this.topLayerContainer.setDepth(9999);  // 确保在最顶层
+        
         // 创建游戏区域
         this.createGameAreas();
         
@@ -114,6 +119,9 @@ export class MainGameScene extends Scene {
         
         // 设置事件监听
         this.setupEventListeners();
+        
+        // 确保顶层容器真的在最上层
+        this.children.bringToTop(this.topLayerContainer);
         
         console.log('Game initialized successfully');
     }
@@ -201,8 +209,8 @@ export class MainGameScene extends Scene {
     }
 
     private createMatch3Grid() {
-        // 创建新的Match3系统
-        this.match3System = Match3System.getInstance(this, this.match3Container);
+        // 创建新的Match3系统，传入顶层容器用于资源显示
+        this.match3System = Match3System.getInstance(this, this.match3Container, this.topLayerContainer);
         this.match3System.initialize();
         
         console.log('Match3 system created');

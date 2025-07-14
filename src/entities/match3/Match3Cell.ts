@@ -9,6 +9,7 @@ export type CellClickCallback = (cell: Match3Cell) => void;
  */
 export class Match3Cell {
     private scene: Phaser.Scene;
+    private container: Phaser.GameObjects.Container;
     
     // 位置信息
     public readonly row: number;
@@ -32,6 +33,7 @@ export class Match3Cell {
     
     constructor(
         scene: Phaser.Scene,
+        container: Phaser.GameObjects.Container,
         row: number,
         col: number,
         x: number,
@@ -39,6 +41,7 @@ export class Match3Cell {
         size: number
     ) {
         this.scene = scene;
+        this.container = container;
         this.row = row;
         this.col = col;
         this.x = x;
@@ -48,6 +51,7 @@ export class Match3Cell {
         // 创建背景
         this.background = scene.add.rectangle(x, y, size, size);
         this.background.setOrigin(0, 0);
+        this.container.add(this.background);
         this.background.setStrokeStyle(1, 0x000000);
         this.background.setFillStyle(0xFFFFFF, 0);
         this.background.setInteractive();
@@ -117,6 +121,7 @@ export class Match3Cell {
             this.resourceSprite.setOrigin(0.5);
             this.resourceSprite.setDisplaySize(34, 34);
             this.resourceSprite.setDepth(1);
+            this.container.add(this.resourceSprite);
         }
         
         // 重置选中状态
@@ -143,6 +148,7 @@ export class Match3Cell {
                 );
                 this.selectionFrame.setDisplaySize(50, 51);
                 this.selectionFrame.setDepth(10);
+                this.container.add(this.selectionFrame);
             }
             this.selectionFrame.setVisible(true);
         } else {
@@ -179,18 +185,6 @@ export class Match3Cell {
         };
     }
     
-    /**
-     * 添加到容器
-     */
-    public addToContainer(container: Phaser.GameObjects.Container): void {
-        container.add(this.background);
-        if (this.resourceSprite) {
-            container.add(this.resourceSprite);
-        }
-        if (this.selectionFrame) {
-            container.add(this.selectionFrame);
-        }
-    }
     
     /**
      * 销毁单元格

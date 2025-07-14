@@ -202,6 +202,12 @@ export class AssetManager {
             { key: 'mithril', type: 'image', path: '/assets/images/mithril.png' },
             { key: 'food', type: 'image', path: '/assets/images/food.png' },
             
+            // 非资源方块图片 (可消除但不掉落资源)
+            { key: 'dirt', type: 'image', path: '/assets/images/dirt.png' },
+            { key: 'grass', type: 'image', path: '/assets/images/grass.png' },
+            { key: 'lava', type: 'image', path: '/assets/images/lava.png' },
+            { key: 'sand', type: 'image', path: '/assets/images/sand.png' },
+            
             // 角色图片
             { key: 'dwarf_character', type: 'image', path: '/assets/images/processed_frame_1 1.png' },
             

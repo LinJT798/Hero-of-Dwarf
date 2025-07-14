@@ -12,14 +12,16 @@ export class Match3System {
     
     private scene: Phaser.Scene;
     private container: Phaser.GameObjects.Container;
+    private resourceContainer: Phaser.GameObjects.Container;  // 专门用于资源的容器
     private grid: Match3Grid | null = null;
     private resourceDropSystem: ResourceDropSystem | null = null;
     private eventBus: Match3EventBus;
     private worldTaskManager: WorldTaskManager;
     
-    private constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
+    private constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container, resourceContainer?: Phaser.GameObjects.Container) {
         this.scene = scene;
         this.container = container;
+        this.resourceContainer = resourceContainer || container;  // 如果没有提供专门的资源容器，使用默认容器
         this.eventBus = new Match3EventBus();
         this.worldTaskManager = WorldTaskManager.getInstance();
     }
@@ -27,12 +29,12 @@ export class Match3System {
     /**
      * 获取单例实例
      */
-    public static getInstance(scene?: Phaser.Scene, container?: Phaser.GameObjects.Container): Match3System {
+    public static getInstance(scene?: Phaser.Scene, container?: Phaser.GameObjects.Container, resourceContainer?: Phaser.GameObjects.Container): Match3System {
         if (!Match3System.instance) {
             if (!scene || !container) {
                 throw new Error('Match3System: 首次初始化需要提供scene和container');
             }
-            Match3System.instance = new Match3System(scene, container);
+            Match3System.instance = new Match3System(scene, container, resourceContainer);
         }
         return Match3System.instance;
     }
@@ -43,8 +45,8 @@ export class Match3System {
     public initialize(): void {
         console.log('[Match3System] 初始化连连看系统');
         
-        // 初始化资源掉落系统
-        this.resourceDropSystem = new ResourceDropSystem(this.scene, this.container, this.worldTaskManager);
+        // 初始化资源掉落系统（使用专门的资源容器）
+        this.resourceDropSystem = new ResourceDropSystem(this.scene, this.resourceContainer, this.worldTaskManager);
         
         // 初始化网格
         this.grid = new Match3Grid(

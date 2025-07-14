@@ -73,8 +73,11 @@ The game follows a resource generation → collection → building → defense c
 - Same resource type required for valid matches
 
 **Resource Distribution** (src/entities/Match3Grid.ts):
-- 63 cells total: 62 resources + 1 empty
-- Even distribution: 4 types × 12 + 1 type × 14
+- 63 cells total: 62 blocks + 1 empty
+- Block types:
+  - Resources (droppable): gold, wood, stone, mithril, food
+  - Non-resources (no drops): dirt, grass, lava, sand
+- Distribution: Resources 8×5 + 2 = 42, Non-resources 5×4 = 20
 - Fisher-Yates shuffle for randomization
 
 **Dwarf Task Management** (src/managers/WorldTaskManager.ts):

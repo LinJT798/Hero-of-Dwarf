@@ -58,9 +58,9 @@ export class ResourceDropSystem {
         
         // 创建精灵
         const resourceKey = resourceType === 'gold' ? 'coin' : resourceType;
-        const sprite = this.scene.add.image(x, y, resourceKey);
+        const sprite = this.scene.add.image(x, y - 3, resourceKey);  // 向上移动3px
         sprite.setDisplaySize(this.RESOURCE_SIZE, this.RESOURCE_SIZE);
-        sprite.setDepth(5);
+        sprite.setDepth(10000);  // 即使在顶层容器中，也设置很高的depth确保显示在最上层
         this.container.add(sprite);
         
         // 创建资源数据
@@ -69,7 +69,7 @@ export class ResourceDropSystem {
             resourceType,
             sprite,
             state: ResourceState.FALLING,
-            position: { x, y },
+            position: { x, y: y - 3 },  // 向上移动3px，与精灵位置一致
             velocity: {
                 x: (Math.random() - 0.5) * 50,  // 随机水平速度 (-25 到 25)
                 y: 0                             // 初始垂直速度为0
@@ -112,7 +112,7 @@ export class ResourceDropSystem {
         resource.position.x = newX;
         resource.sprite.setX(newX);
         
-        const targetY = this.GROUND_Y - this.RESOURCE_SIZE / 2;
+        const targetY = this.GROUND_Y - this.RESOURCE_SIZE / 2 - 3;  // 调整地面位置，因为资源初始位置上移了3px
         
         // 检查是否碰到地面
         if (newY >= targetY) {

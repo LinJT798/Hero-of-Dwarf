@@ -26,8 +26,14 @@ export class Match3Grid {
     private readonly GRID_X = 469;    // Figma: map位置(469,90)
     private readonly GRID_Y = 90;
     
-    // 资源类型
+    // 可掉落的资源类型
     private readonly RESOURCE_TYPES = ['gold', 'wood', 'stone', 'mithril', 'food'];
+    
+    // 非资源方块类型（可消除但不掉落资源）
+    private readonly NON_RESOURCE_TYPES = ['dirt', 'grass', 'lava', 'sand'];
+    
+    // 所有方块类型
+    private readonly ALL_BLOCK_TYPES = [...this.RESOURCE_TYPES, ...this.NON_RESOURCE_TYPES];
     
     constructor(
         scene: Phaser.Scene,
@@ -64,9 +70,8 @@ export class Match3Grid {
                 const x = this.GRID_X + col * this.CELL_SIZE;
                 const y = this.GRID_Y + row * this.CELL_SIZE;
                 
-                const cell = new Match3Cell(this.scene, row, col, x, y, this.CELL_SIZE);
+                const cell = new Match3Cell(this.scene, this.container, row, col, x, y, this.CELL_SIZE);
                 cell.setClickCallback(this.handleCellClick.bind(this));
-                cell.addToContainer(this.container);
                 
                 this.grid[row][col] = cell;
             }
@@ -78,35 +83,49 @@ export class Match3Grid {
      */
     private fillRandomResources(): void {
         const totalCells = this.GRID_WIDTH * this.GRID_HEIGHT; // 63
-        const resources: (string | null)[] = [];
+        const blocks: (string | null)[] = [];
         
-        // 分配方案：4种各12个，1种14个，总计62个
-        const distribution = [12, 12, 12, 12, 14];
+        // 分配方案：9种方块，确保每种都是偶数个
+        // 5种资源：各8个 = 40个
+        // 4种非资源：各5个 = 20个  
+        // 再加2个随机资源 = 62个方块 + 1个空格 = 63
         
-        for (let i = 0; i < this.RESOURCE_TYPES.length; i++) {
-            for (let j = 0; j < distribution[i]; j++) {
-                resources.push(this.RESOURCE_TYPES[i]);
+        // 添加资源方块
+        for (const resourceType of this.RESOURCE_TYPES) {
+            for (let j = 0; j < 8; j++) {
+                blocks.push(resourceType);
             }
         }
         
+        // 添加非资源方块
+        for (const nonResourceType of this.NON_RESOURCE_TYPES) {
+            for (let j = 0; j < 5; j++) {
+                blocks.push(nonResourceType);
+            }
+        }
+        
+        // 再添加2个随机资源确保总数为62
+        blocks.push(this.RESOURCE_TYPES[0]); // gold
+        blocks.push(this.RESOURCE_TYPES[0]); // gold
+        
         // 添加一个空格
-        resources.push(null);
+        blocks.push(null);
         
         // Fisher-Yates洗牌
-        for (let i = resources.length - 1; i > 0; i--) {
+        for (let i = blocks.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [resources[i], resources[j]] = [resources[j], resources[i]];
+            [blocks[i], blocks[j]] = [blocks[j], blocks[i]];
         }
         
         // 填充到网格
         let index = 0;
         for (let row = 0; row < this.GRID_HEIGHT; row++) {
             for (let col = 0; col < this.GRID_WIDTH; col++) {
-                this.grid[row][col].setResource(resources[index++]);
+                this.grid[row][col].setResource(blocks[index++]);
             }
         }
         
-        console.log('[Match3Grid] 资源填充完成');
+        console.log('[Match3Grid] 方块填充完成');
     }
     
     /**
@@ -226,19 +245,24 @@ export class Match3Grid {
      * 消除单元格
      */
     private eliminateCells(cells: Match3Cell[]): void {
-        const resourceType = cells[0].resourceType;
+        const blockType = cells[0].resourceType;
         
-        // 创建掉落资源
-        for (const cell of cells) {
-            const pos = cell.getCenterPosition();
-            const resourceId = this.resourceDropSystem.createResource(pos.x, pos.y, cell.resourceType);
-            
-            // 触发资源创建事件
-            this.eventBus.emit('resource-created', {
-                id: resourceId,
-                resourceType: cell.resourceType,
-                position: pos
-            });
+        // 判断是否是可掉落的资源类型
+        const isResource = this.RESOURCE_TYPES.includes(blockType);
+        
+        // 只有资源类型才创建掉落资源
+        if (isResource) {
+            for (const cell of cells) {
+                const pos = cell.getCenterPosition();
+                const resourceId = this.resourceDropSystem.createResource(pos.x, pos.y, cell.resourceType);
+                
+                // 触发资源创建事件
+                this.eventBus.emit('resource-created', {
+                    id: resourceId,
+                    resourceType: cell.resourceType,
+                    position: pos
+                });
+            }
         }
         
         // 清空单元格
@@ -247,7 +271,11 @@ export class Match3Grid {
         }
         
         // 触发消除事件
-        this.eventBus.emit('cells-eliminated', { cells, resourceType });
+        this.eventBus.emit('cells-eliminated', { 
+            cells, 
+            blockType,
+            isResource 
+        });
         
         // 清空选中列表
         this.selectedCells = [];
