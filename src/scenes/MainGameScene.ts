@@ -144,8 +144,8 @@ export class MainGameScene extends Scene {
             this.backgroundContainer.add(skyBackground);
         }
         
-        // 地面背景动画 (Figma: back_land 1280×747px, 位置(0,141))
-        this.landAnimation = new LandAnimation(this, 0, 141);
+        // 地面背景动画 (Figma: back_land 1280×747px, 位置(0,141)) - 向上移动15px
+        this.landAnimation = new LandAnimation(this, 0, 126);
         
         // 设置地面精灵的尺寸
         const staticSprite = this.landAnimation.getStaticSprite();

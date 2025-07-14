@@ -6,24 +6,18 @@ export class LandAnimation {
     private scene: Phaser.Scene;
     private staticLandSprite: Phaser.GameObjects.Image;
     private animationSprite: Phaser.GameObjects.Sprite;
-    private windTimer: number = 0;
-    private isAnimating: boolean = false;
-    
-    // 微风动画配置
-    private readonly WIND_INTERVAL_MIN = 15000; // 最少15秒
-    private readonly WIND_INTERVAL_MAX = 25000; // 最多25秒
-    private nextWindTime: number;
+    // 动画一直播放，不需要间隔配置
     
     constructor(scene: Phaser.Scene, x: number, y: number) {
         this.scene = scene;
         
-        // 设置下次微风时间
-        this.nextWindTime = this.getRandomWindInterval();
-        
         this.createSprites(x, y);
         this.createWindAnimation();
         
-        console.log(`LandAnimation created at (${x}, ${y}), next wind in ${this.nextWindTime}ms`);
+        // 立即开始播放动画
+        this.startContinuousAnimation();
+        
+        console.log(`LandAnimation created at (${x}, ${y}), continuous animation started`);
     }
     
     /**
@@ -36,11 +30,14 @@ export class LandAnimation {
             this.staticLandSprite.setOrigin(0, 0);
             this.staticLandSprite.setVisible(true);
             
-            // 创建动画精灵（初始隐藏）
+            // 创建动画精灵（直接显示）
             if (this.scene.textures.exists('land_wind_1')) {
                 this.animationSprite = this.scene.add.sprite(x, y, 'land_wind_1');
                 this.animationSprite.setOrigin(0, 0);
-                this.animationSprite.setVisible(false);
+                this.animationSprite.setVisible(true);
+                
+                // 隐藏静态精灵，因为我们要一直播放动画
+                this.staticLandSprite.setVisible(false);
                 
                 console.log('Land animation sprites created successfully');
             } else {
@@ -76,7 +73,7 @@ export class LandAnimation {
                     key: animKey,
                     frames: windFrames,
                     frameRate: 20, // 20fps统一帧率
-                    repeat: 0 // 播放一次
+                    repeat: -1 // 无限循环
                 });
                 
                 console.log(`Created land wind animation with ${windFrames.length} frames`);
@@ -87,79 +84,27 @@ export class LandAnimation {
     }
     
     /**
-     * 更新动画逻辑
+     * 开始连续播放动画
      */
-    public update(delta: number): void {
-        if (this.isAnimating) return;
-        
-        // 更新微风计时器
-        this.windTimer += delta;
-        
-        // 检查是否到了播放微风的时间
-        if (this.windTimer >= this.nextWindTime) {
-            this.playWindAnimation();
-        }
-    }
-    
-    /**
-     * 播放微风动画
-     */
-    private playWindAnimation(): void {
-        if (!this.animationSprite || this.isAnimating) return;
+    private startContinuousAnimation(): void {
+        if (!this.animationSprite) return;
         
         const animKey = 'land_wind_animation';
         
         if (this.scene.anims.exists(animKey)) {
-            this.isAnimating = true;
-            
-            // 隐藏静态地面，显示动画精灵
-            this.staticLandSprite.setVisible(false);
-            this.animationSprite.setVisible(true);
-            
-            // 播放微风动画
+            // 播放无限循环的动画
             this.animationSprite.play(animKey);
-            
-            // 监听动画完成事件
-            this.animationSprite.once('animationcomplete', this.onWindAnimationComplete, this);
-            
-            console.log('Playing wind animation');
-            
-        } else {
-            console.warn('Wind animation not found, skipping');
-            this.resetWindTimer();
+            console.log('Started continuous land animation');
         }
     }
     
     /**
-     * 微风动画完成回调
+     * 更新动画逻辑
      */
-    private onWindAnimationComplete(): void {
-        this.isAnimating = false;
-        
-        // 隐藏动画精灵，显示静态地面
-        this.animationSprite.setVisible(false);
-        this.staticLandSprite.setVisible(true);
-        
-        // 重置计时器，准备下次微风
-        this.resetWindTimer();
-        
-        console.log(`Wind animation completed, next wind in ${this.nextWindTime}ms`);
+    public update(delta: number): void {
+        // 动画已经在无限循环，不需要额外的更新逻辑
     }
     
-    /**
-     * 重置微风计时器
-     */
-    private resetWindTimer(): void {
-        this.windTimer = 0;
-        this.nextWindTime = this.getRandomWindInterval();
-    }
-    
-    /**
-     * 获取随机微风间隔时间
-     */
-    private getRandomWindInterval(): number {
-        return this.WIND_INTERVAL_MIN + Math.random() * (this.WIND_INTERVAL_MAX - this.WIND_INTERVAL_MIN);
-    }
     
     
     /**
@@ -180,10 +125,8 @@ export class LandAnimation {
      * 强制触发微风动画（调试用）
      */
     public triggerWindAnimation(): void {
-        if (!this.isAnimating) {
-            this.windTimer = this.nextWindTime;
-            this.playWindAnimation();
-        }
+        // 动画已经在持续播放，此方法不再需要
+        console.log('Animation is already playing continuously');
     }
     
     /**
