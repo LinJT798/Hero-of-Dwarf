@@ -489,19 +489,22 @@ export class Dwarf {
             return;
         }
         
-        // 5. 收集优先级：检查地上是否有资源（只在非收集状态时检查）
+        // 5. 收集优先级：通过WorldTaskManager获取可用资源（只在非收集状态时检查）
         if (this.state !== DwarfState.GATHER) {
-            const match3Grid = (this.scene as any).match3Grid;
-            if (match3Grid) {
-                const resources = match3Grid.getDroppedResources();
-                const availableResource = resources.find(r => !r.getIsCollected() && !r.isClaimed());
+            const worldTaskMgr = this.getWorldTaskManager();
+            if (worldTaskMgr) {
+                const availableResources = worldTaskMgr.getAvailableResources();
                 
-                if (availableResource) {
-                    // 直接认领并进入收集状态
-                    availableResource.claim(this.id);
-                    this.targetResourceId = availableResource.id;
-                    this.enterGather();
-                    return;
+                if (availableResources.length > 0) {
+                    // 尝试锁定第一个可用资源
+                    const resource = availableResources[0];
+                    const locked = worldTaskMgr.tryLockResource(resource.resourceRef.id, this.id);
+                    
+                    if (locked) {
+                        this.targetResourceId = resource.resourceRef.id;
+                        this.enterGather();
+                        return;
+                    }
                 }
             }
         }
@@ -632,11 +635,11 @@ export class Dwarf {
      * 中止当前动作
      */
     private abortCurrentAction(): void {
-        // 如果有目标资源，释放认领
+        // 如果有目标资源，释放锁定
         if (this.targetResourceId) {
-            const resource = this.getTargetResource();
-            if (resource) {
-                resource.releaseClaim();
+            const worldTaskMgr = this.getWorldTaskManager();
+            if (worldTaskMgr) {
+                worldTaskMgr.releaseResourceLock(this.targetResourceId);
             }
         }
         
@@ -933,17 +936,23 @@ export class Dwarf {
     }
     
     /**
+     * 获取WorldTaskManager实例
+     */
+    private getWorldTaskManager(): any {
+        return WorldTaskManager.getInstance();
+    }
+
+    /**
      * 获取目标资源
      */
     private getTargetResource(): any {
         if (!this.targetResourceId) return null;
         
-        // 从感知到的资源中查找目标资源
-        const match3Grid = (this.scene as any).match3Grid;
-        if (!match3Grid) return null;
+        // 从WorldTaskManager获取资源
+        const worldTaskMgr = this.getWorldTaskManager();
+        if (!worldTaskMgr) return null;
         
-        const droppedResources = match3Grid.getDroppedResources();
-        return droppedResources.find(r => r.id === this.targetResourceId);
+        return worldTaskMgr.getResourceById(this.targetResourceId);
     }
     
     /**
@@ -1068,11 +1077,11 @@ export class Dwarf {
     public destroy(): void {
         this.scene.events.off('building-purchased', this.handleBuildingPurchased, this);
         
-        // 释放资源认领
+        // 释放资源锁定
         if (this.targetResourceId) {
-            const resource = this.getTargetResource();
-            if (resource) {
-                resource.releaseClaim();
+            const worldTaskMgr = this.getWorldTaskManager();
+            if (worldTaskMgr) {
+                worldTaskMgr.releaseResourceLock(this.targetResourceId);
             }
         }
         

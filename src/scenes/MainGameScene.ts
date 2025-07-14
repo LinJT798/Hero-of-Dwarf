@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { AssetManager } from '../systems/AssetManager';
 import { configManager } from '../systems/ConfigManager';
-import { Match3Grid } from '../entities/Match3Grid';
+import { Match3System } from '../systems/match3/Match3System';
 import { resourceManager } from '../managers/ResourceManager';
 import { Shop } from '../entities/Shop';
 import { BuildingManager } from '../managers/BuildingManager';
@@ -16,7 +16,7 @@ import { LandAnimation } from '../entities/LandAnimation';
  */
 export class MainGameScene extends Scene {
     private assetManager!: AssetManager;
-    private match3Grid!: Match3Grid;
+    private match3System!: Match3System;
     private shop!: Shop;
     private buildingManager!: BuildingManager;
     private dwarfManager!: DwarfManager;
@@ -201,10 +201,11 @@ export class MainGameScene extends Scene {
     }
 
     private createMatch3Grid() {
-        // 创建连连看网格系统
-        this.match3Grid = new Match3Grid(this, this.match3Container);
+        // 创建新的Match3系统
+        this.match3System = Match3System.getInstance(this, this.match3Container);
+        this.match3System.initialize();
         
-        console.log('Match3 grid system created');
+        console.log('Match3 system created');
     }
 
     private createShopArea() {
@@ -438,6 +439,14 @@ export class MainGameScene extends Scene {
             }
         }
         
+        if (event.code === 'KeyT') {
+            // 测试Match3系统
+            if (this.match3System) {
+                console.log('Match3 System Status:');
+                console.log('- Grid State:', this.match3System.getGridState());
+                console.log('- Dropped Resources:', this.match3System.getDroppedResourceCount());
+            }
+        }
         
         if (event.code === 'Escape') {
             // 返回主菜单
@@ -515,9 +524,9 @@ export class MainGameScene extends Scene {
         }
         
         // 游戏主循环
-        // 更新连连看网格（包括掉落资源）
-        if (this.match3Grid) {
-            this.match3Grid.update(delta);
+        // 更新Match3系统
+        if (this.match3System) {
+            this.match3System.update(delta);
         }
         
         // 更新怪物管理器

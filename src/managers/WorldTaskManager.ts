@@ -132,6 +132,9 @@ export class WorldTaskManager {
      * 更新资源TTL
      */
     private updateResourceTTL(delta: number): void {
+        // 收集需要删除的资源ID，避免在迭代时修改Map
+        const resourcesToDelete: string[] = [];
+        
         for (const [resourceId, resource] of this.resources.entries()) {
             if (resource.claimedBy !== null) {
                 resource.claimTTL -= delta;
@@ -144,11 +147,16 @@ export class WorldTaskManager {
                 }
             }
             
-            // 如果资源已被收集或不存在，移除节点
+            // 如果资源已被收集或不存在，标记为需要删除
             if (!resource.resourceRef || resource.resourceRef.getIsCollected()) {
-                this.resources.delete(resourceId);
-                console.log(`[WorldTaskMgr] 自动移除已收集的资源: ${resourceId}`);
+                resourcesToDelete.push(resourceId);
             }
+        }
+        
+        // 批量删除已收集的资源
+        for (const resourceId of resourcesToDelete) {
+            this.resources.delete(resourceId);
+            console.log(`[WorldTaskMgr] 自动移除已收集的资源: ${resourceId}`);
         }
     }
 

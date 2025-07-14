@@ -32,6 +32,15 @@ export class ResourceManager {
     }
 
     /**
+     * 获取指定资源的数量
+     * @param resourceType 资源类型
+     * @returns 资源数量
+     */
+    public getResource(resourceType: string): number {
+        return this.resources.get(resourceType) || 0;
+    }
+
+    /**
      * 添加资源
      * @param resourceType 资源类型
      * @param amount 数量

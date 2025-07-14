@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Magic Same Game (连连看塔防游戏) - A match-3 tower defense game combining elimination gameplay with strategic tower defense mechanics. Built with Phaser 3 and TypeScript.
 
+**Game concept**: Players match resources on a 9x7 grid, which are then collected by dwarf NPCs to build defensive towers against waves of monsters attacking the castle.
+
 ## Technology Stack
 
 - **Game Engine**: Phaser 3.70.0
@@ -33,197 +35,86 @@ npm run build
 npm run preview
 ```
 
-## Project Architecture
+## High-Level Architecture
 
-```
-src/
-├── main.ts                 # Game initialization, Phaser config
-├── entities/               # Game objects
-│   ├── Dwarf.ts           # Resource collector NPC with state machine
-│   ├── Match3Cell.ts      # Individual grid cells
-│   ├── Match3Grid.ts      # 9x7 match-3 game board
-│   ├── Monster.ts         # Enemy units
-│   ├── DroppedResource.ts # Falling resources with claiming system
-│   └── Shop.ts            # Building purchase interface
-├── managers/              # State and entity management
-│   ├── BuildingManager.ts # Tower placement and management
-│   ├── DwarfManager.ts    # Multi-dwarf task scheduling
-│   ├── MonsterManager.ts  # Enemy spawning and waves
-│   └── ResourceManager.ts # Resource tracking and economy
-├── scenes/
-│   └── MainGameScene.ts   # Primary game scene
-├── systems/               # Core infrastructure
-│   ├── AssetManager.ts    # Asset loading and caching
-│   ├── ConfigManager.ts   # JSON config loading
-│   └── GameStateManager.ts # Game state and progression
-└── utils/
-    └── PathFinder.ts      # BFS pathfinding for match-3
+### Core Game Loop
+The game follows a resource generation → collection → building → defense cycle:
+1. **MainMenuScene** transitions directly to **MainGameScene**
+2. **Match3Grid** generates resources through player matches
+3. **DwarfManager** coordinates NPCs to collect **DroppedResource** instances
+4. **ResourceManager** (singleton) tracks global economy with observer pattern
+5. **Shop** allows tower purchases validated against resources
+6. **BuildingManager** handles tower placement and combat
+7. **MonsterManager** spawns waves per JSON configuration
 
-public/
-├── assets/
-│   ├── animations/        # Animation sprite sheets
-│   ├── audio/            # Sound effects and music
-│   └── images/           # Figma-exported static images
-└── configs/
-    └── game/             # Core game configurations
-        ├── match3.json   # Grid mechanics, resource distribution
-        ├── monster.json  # Enemy types, stats, waves
-        ├── shop.json     # Building costs, shop items
-        └── tower.json    # Tower stats, damage, range
-```
+### Key Architectural Patterns
 
-## Key Systems and Usage
+1. **Singleton Pattern** for global state:
+   - `ConfigManager`: Hierarchical JSON config access
+   - `ResourceManager`: Global resource tracking with listeners
+   - `WorldTaskManager`: CAS-based task locking with TTL
 
-### ConfigManager
-Loads and manages JSON configuration files:
-```typescript
-// Access nested config values
-const towerDamage = configManager.getConfigValue('game_tower.arrow_tower.damage');
-const monsterHealth = configManager.getConfigValue('game_monster.basic_monster.health');
-```
+2. **State Machine Pattern**:
+   - Dwarf NPCs: IDLE → WALKING → FIGHTING/BUILDING
+   - Task priorities: FIGHT(4) > BUILD(3) > DELIVER(2) > COLLECT(1)
 
-### AssetManager
-Handles resource loading with Phaser and creates fallback textures:
-```typescript
-// Load Figma assets in preload
-await assetManager.loadBaseAssets();
-// Creates fallback textures if assets fail to load
-assetManager.createDemoTextures();
-```
+3. **Event-Driven Communication**:
+   - `'resource-landed'`: Triggers dwarf collection
+   - `'building-purchased'`: Initiates placement mode
+   - `'monster-killed'`: Updates wave progress
+   - `'place-building'`: Finalizes tower placement
 
-### GameStateManager
-Tracks game progression and state:
-```typescript
-// Update game state
-GameStateManager.setState('currentWave', 5);
-GameStateManager.getState('playerResources');
-```
+### Critical Systems
 
-### ResourceManager (Singleton)
-Global resource management with observer pattern:
-```typescript
-// Add resources
-resourceManager.addResource('gold', 10);
-// Listen for resource changes
-resourceManager.addListener((resources) => {
-    console.log('Resources updated:', resources);
-});
-```
+**Match-3 Connection Algorithm** (src/utils/PathFinder.ts):
+- BFS with state: `(row, col, direction, turns)`
+- Maximum 2 turns (3 line segments)
+- Edge traversal for out-of-bounds paths
+- Same resource type required for valid matches
 
-### Dwarf State Machine
-Dwarves use a priority-based task system:
-```typescript
-// Task priorities: FIGHT(4) > BUILD_STRUCTURE(3) > DELIVER_RESOURCE(2) > COLLECT_RESOURCE(1)
-dwarf.addTask({
-    type: TaskType.COLLECT_RESOURCE,
-    priority: TaskPriority.COLLECT_RESOURCE,
-    target: droppedResource
-});
-```
-
-## Configuration System
-
-All game balance and content is driven by JSON files in `public/configs/game/`:
-
-- **match3.json**: Grid size (9x7), resource types, match requirements, drop probabilities
-- **monster.json**: Enemy health, speed, damage, spawn patterns
-- **tower.json**: Building costs, damage, range, attack speed
-- **shop.json**: Available items, costs, refresh mechanics
-
-Configuration changes take effect on page refresh during development.
-
-**Key Configuration Details:**
-- Match-3 grid is exactly 9 columns × 7 rows with 51×51px cells
-- Grid positioned at (469,90) with total resource count of 63 cells
-- Resource distribution ensures even numbers (one empty cell strategy)
-- BFS pathfinding allows maximum 2 turns for match connections
-- Building position slots are 162×162px (8 predefined positions)
-- Shop slots are 190×96px with left-aligned 85×85px icons
-- Resource panel is 170×304px with 34×34px resource icons
-
-## Resource Types
-
-The game uses 5 resource types (defined in match3.json):
-1. Gold (金币)
-2. Wood (木材)
-3. Stone (石头)
-4. Mithril (秘银)
-5. Food (食物)
-
-## Game Flow
-
-1. **Match-3 Phase**: Player makes matches on 9x7 grid
-2. **Resource Drop**: Matched cells drop resources with claiming system
-3. **Collection**: Dwarf NPC collects dropped resources (one dwarf per resource)
-4. **Building**: Use resources to purchase towers from shop
-5. **Defense**: Towers attack incoming monsters
-6. **Victory**: Survive all waves to complete level
-
-## Critical Implementation Details
-
-### Match-3 Connection Algorithm
-- Uses BFS algorithm with state tracking: `(row, col, direction, turns)`
-- Maximum 2 turns allowed (3 line segments total)
-- Supports edge traversal for out-of-bounds pathfinding
-- Connections require same resource type and both cells non-empty
-
-### Multi-Dwarf Task Management
-- Resource claiming prevents multiple dwarves targeting same resource
-- Task priority system ensures combat takes precedence
-- State machine: IDLE → WALKING → FIGHTING/BUILDING
-- Automatic task detection when idle
-
-### Resource Distribution
-- Total 63 grid cells, using 62 for resources (one empty)
-- Even distribution: 4 types × 12 each + 1 type × 14 = 62 total
+**Resource Distribution** (src/entities/Match3Grid.ts):
+- 63 cells total: 62 resources + 1 empty
+- Even distribution: 4 types × 12 + 1 type × 14
 - Fisher-Yates shuffle for randomization
-- Ensures all resource types appear in even numbers
 
-### Event-Driven Architecture
-The game uses Phaser's event system for component communication:
-- `'resource-landed'` - When resources hit ground
-- `'building-purchased'` - When player buys from shop
-- `'monster-killed'` - When enemies are defeated
-- `'place-building'` - When player places buildings
+**Dwarf Task Management** (src/managers/WorldTaskManager.ts):
+- Resource claiming prevents duplicate assignments
+- 10-second TTL on resource locks
+- Horizontal movement only (y=789)
+- Castle delivery zone: x ∈ [-221, 239]
 
-## Adding New Content
+**Configuration System**:
+- JSON-driven balance in `public/configs/game/`
+- Access pattern: `configManager.getConfigValue('game_tower.arrow_tower.damage')`
+- Hot-reload requires page refresh
 
-### New Monster Type
-1. Add entry to `public/configs/game/monster.json`
-2. Add sprite assets to `public/assets/images/monsters/`
-3. Update `MonsterManager` spawn logic if needed
+## Key Implementation Constraints
 
-### New Building Type
-1. Add entry to `public/configs/game/tower.json`
-2. Add to `public/configs/game/shop.json`
-3. Update `BuildingManager` for placement logic
-
-### New Animation
-1. Add sprite sheet to `public/assets/animations/`
-2. Register with `AssetManager.loadBaseAssets()`
-3. Create animation config in scene
+- **Grid**: Exactly 9×7 cells, 51×51px each, positioned at (469,90)
+- **Buildings**: 8 slots, 162×162px each, pre-defined positions
+- **Shop**: 190×96px slots with 85×85px left-aligned icons
+- **Resources**: 5 types (gold, wood, stone, mithril, food)
+- **Animations**: Standardized 20 FPS across all sprites
+- **Coordinates**: Strict adherence to Figma design specs
 
 ## Debug Controls
 
-During development, use these keyboard shortcuts in-game:
 - **R**: Add test resources
 - **S**: Refresh shop inventory
-- **D**: Display dwarf status info
+- **D**: Display dwarf status
 - **M**: Force next monster wave
-- **V**: Force victory (debug)
-- **B**: Force defeat (debug)
+- **V/B**: Force victory/defeat
+- **T**: Run Match3 logic tests
 
-## Important Notes
+## Architecture Notes
 
-- Project uses TypeScript path aliases (`@/` maps to `src/`)
-- All text is bilingual (Chinese primary, English secondary)
-- No test framework is currently configured
-- Development server runs on port 3000 with auto-open
-- Hot reload works for code changes, config changes require refresh
-- Game uses strict Figma design coordinates (1280×832 resolution)
-- Dwarf movement is constrained to horizontal only (ground level)
-- Castle delivery area: x coordinates from -221 to 239
-- BuildingManager supports 8 pre-defined building positions (162×162px each)
-- All managers use singleton pattern for global state management
-- Shop layout uses left-aligned icon (85×85px) with right-side cost display
-- Resource information panel uses larger 34×34px icons with improved spacing
+- TypeScript path aliases: `@/` → `src/`
+- No test framework or linting configured
+- Bilingual support (Chinese primary)
+- Direct scene transitions (no loading screens)
+- All managers use singleton pattern
+- Hot reload for code, manual refresh for configs
+- MIT licensed project
+- Asset loading: Critical assets preloaded, non-core loaded dynamically
+- Animation naming: Sequential frames (e.g., `frame_001.png`)
+- Resource naming: Lowercase with underscores

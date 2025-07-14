@@ -46,8 +46,7 @@ export class DwarfManager {
         this.scene.events.on('resource-landed', this.handleResourceLanded, this);
         this.scene.events.on('building-purchased', this.handleBuildingRequest, this);
         
-        // 监听资源掉落事件，自动注册到WorldTaskManager
-        this.scene.events.on('resource-drop', this.handleResourceDrop, this);
+        // resource-drop事件已废弃，资源现在直接在ResourceDropSystem中注册
     }
 
     /**
@@ -77,32 +76,18 @@ export class DwarfManager {
      * 处理资源落地事件（资源到达地面后）
      */
     private handleResourceLanded(data: { resourceType: string; position: any; resource: any }): void {
-        console.log('Resource landed:', data.resourceType, data.position);
+        console.log('[DwarfManager] 资源已落地并稳定:', data.resourceType, data.position);
         
-        // 注册资源到WorldTaskManager
-        if (data.resource && data.resource.isStable()) {
-            this.worldTaskMgr.registerResource(data.resource);
-        }
+        // 资源已经在ResourceDropSystem中注册到WorldTaskManager，这里不需要重复注册
+        // 只需要通知矮人们有新资源可以收集
     }
     
     /**
-     * 处理资源掉落事件
+     * 处理资源掉落事件（已废弃）
      */
     private handleResourceDrop(data: { resourceType: string; position: any; resource: any }): void {
-        console.log(`[DwarfManager] 收到资源掉落事件: ${data.resourceType} at (${data.position.x}, ${data.position.y})`);
-        
-        // 立即注册资源，WorldTaskManager会处理稳定性检查
-        if (data.resource) {
-            this.worldTaskMgr.registerResource(data.resource);
-            console.log(`[DwarfManager] 立即注册掉落资源: ${data.resourceType} with ID: ${data.resource.id}`);
-        }
-        
-        // 额外的延迟检查，确保资源稳定后可以被感知
-        setTimeout(() => {
-            if (data.resource && data.resource.isStable()) {
-                console.log(`[DwarfManager] 确认资源已稳定: ${data.resourceType} ID: ${data.resource.id}`);
-            }
-        }, 2000); // 2秒后确认
+        // 此方法已废弃，资源现在在ResourceDropSystem中管理
+        console.warn('[DwarfManager] handleResourceDrop已废弃，不应该被调用');
     }
 
     /**
@@ -313,7 +298,7 @@ export class DwarfManager {
     public destroy(): void {
         this.scene.events.off('resource-landed', this.handleResourceLanded, this);
         this.scene.events.off('building-purchased', this.handleBuildingRequest, this);
-        this.scene.events.off('resource-drop', this.handleResourceDrop, this);
+        // resource-drop事件已废弃
         
         // 清理WorldTaskManager
         this.worldTaskMgr.clear();
