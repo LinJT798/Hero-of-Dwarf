@@ -108,6 +108,7 @@ The game follows a resource generation → collection → building → defense c
 - **M**: Force next monster wave
 - **V/B**: Force victory/defeat
 - **T**: Run Match3 logic tests
+- **A**: Force create arrow tower (bypasses building process)
 
 ## Architecture Notes
 

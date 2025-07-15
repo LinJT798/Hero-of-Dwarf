@@ -386,7 +386,7 @@ class Building implements CombatUnit {
         health: 200,
         maxHealth: 200,
         attack: 25,
-        range: 150,
+        range: 500,        // 攻击范围设置为500像素
         attackSpeed: 1000, // 1秒攻击间隔
         armor: 10
     };
@@ -517,7 +517,8 @@ class Building implements CombatUnit {
             this.sprite.stop();
             // 恢复到默认纹理
             this.sprite.setTexture('archer_building');
-            // setDisplaySize应该保持不变，不需要重新设置
+            // 确保尺寸恢复为162x162
+            this.sprite.setDisplaySize(162, 162);
         }
     }
     
@@ -757,31 +758,173 @@ class Building implements CombatUnit {
     private createAttackEffect(target: CombatUnit): void {
         const targetPos = target.getPosition();
         
-        // 创建箭矢特效
-        const arrow = this.scene.add.rectangle(this.x, this.y, 3, 15, 0xFFFF00);
+        // 计算正确的弓箭射出位置
+        // 弓箭塔尺寸：162x162px，origin(0,0)
+        // 射出位置：x轴中间，y轴上界往下39px
+        const arrowStartX = this.x + 81; // 弓箭塔宽度的一半 (162/2)
+        const arrowStartY = this.y + 39; // 弓箭塔上界往下39px
         
-        // 箭矢飞行动画
-        this.scene.tweens.add({
-            targets: arrow,
-            x: targetPos.x,
-            y: targetPos.y,
-            duration: 200,
-            ease: 'Linear',
-            onComplete: () => {
-                // 创建命中特效
-                const hitEffect = this.scene.add.rectangle(targetPos.x, targetPos.y, 20, 20, 0xFF0000, 0.7);
+        // 创建箭矢特效 - 使用箭矢图片资源
+        let arrow: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle;
+        
+        if (this.scene.textures.exists('arrow')) {
+            // 使用箭矢图片，确保尺寸为49x13像素
+            arrow = this.scene.add.image(arrowStartX, arrowStartY, 'arrow');
+            arrow.setDisplaySize(49, 13);
+            arrow.setOrigin(0.5, 0.5);
+            
+            // 初始角度设为0，后续会在抛物线动画中动态调整
+            arrow.setRotation(0);
+        } else {
+            // 如果图片不存在，使用备用的矩形
+            arrow = this.scene.add.rectangle(arrowStartX, arrowStartY, 3, 15, 0xFFFF00);
+            console.warn('Arrow image not found, using fallback rectangle');
+        }
+        
+        // 计算抛物线飞行参数
+        const flightData = this.calculateParabolicFlight(
+            { x: arrowStartX, y: arrowStartY },
+            target,
+            1600 // 飞行时间：1600毫秒（放慢一倍）
+        );
+        
+        // 创建抛物线飞行动画
+        this.createParabolicAnimation(arrow, flightData, target);
+    }
+    
+    /**
+     * 计算抛物线飞行参数
+     */
+    private calculateParabolicFlight(
+        startPos: { x: number; y: number }, 
+        target: CombatUnit, 
+        flightTime: number
+    ): { targetPos: { x: number; y: number }; arcHeight: number } {
+        // 预测目标在箭矢落地时的位置
+        const targetPos = this.predictTargetPosition(target, flightTime);
+        
+        // 计算抛物线的最高点
+        const distance = CombatUtils.getDistance(startPos, targetPos);
+        const arcHeight = Math.max(50, distance * 0.3); // 弧高至少50像素，或距离的30%
+        
+        return {
+            targetPos,
+            arcHeight
+        };
+    }
+    
+    /**
+     * 预测目标在指定时间后的位置
+     */
+    private predictTargetPosition(target: CombatUnit, flightTime: number): { x: number; y: number } {
+        const currentPos = target.getPosition();
+        
+        // 如果目标是哥布林，预测其移动位置
+        if ('getState' in target) {
+            const goblin = target as any;
+            const state = goblin.getState();
+            
+            if (state === 'moving') {
+                // 哥布林向左移动，速度为50像素/秒
+                const moveSpeed = 50;
+                const timeInSeconds = flightTime / 1000;
+                const predictedX = currentPos.x - (moveSpeed * timeInSeconds);
                 
-                this.scene.tweens.add({
-                    targets: hitEffect,
-                    alpha: 0,
-                    scaleX: 2,
-                    scaleY: 2,
-                    duration: 300,
-                    ease: 'Power2',
-                    onComplete: () => {
-                        hitEffect.destroy();
+                return {
+                    x: predictedX,
+                    y: currentPos.y
+                };
+            }
+        }
+        
+        // 对于其他目标或静止状态，返回当前位置
+        return currentPos;
+    }
+    
+    /**
+     * 创建抛物线动画
+     */
+    private createParabolicAnimation(
+        arrow: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle,
+        flightData: { targetPos: { x: number; y: number }; arcHeight: number },
+        target: CombatUnit
+    ): void {
+        const startPos = { x: arrow.x, y: arrow.y };
+        const { targetPos, arcHeight } = flightData;
+        
+        // 计算抛物线中点
+        const midX = (startPos.x + targetPos.x) / 2;
+        const midY = Math.min(startPos.y, targetPos.y) - arcHeight;
+        
+        // 创建路径点
+        const path = new Phaser.Curves.QuadraticBezier(
+            new Phaser.Math.Vector2(startPos.x, startPos.y),
+            new Phaser.Math.Vector2(midX, midY),
+            new Phaser.Math.Vector2(targetPos.x, targetPos.y)
+        );
+        
+        // 动画进度
+        let t = 0;
+        let lastPos = { x: startPos.x, y: startPos.y };
+        
+        // 使用自定义更新函数实现抛物线飞行
+        const tween = this.scene.tweens.add({
+            targets: { progress: 0 },
+            progress: 1,
+            duration: 1600, // 飞行时间1600毫秒（放慢一倍）
+            ease: 'Sine.easeInOut', // 加减速效果
+            onUpdate: (tween) => {
+                t = tween.getValue();
+                
+                // 根据贝塞尔曲线获取当前位置
+                const currentPos = path.getPoint(t);
+                arrow.setPosition(currentPos.x, currentPos.y);
+                
+                // 计算箭矢旋转角度（朝向飞行方向）
+                if (arrow instanceof Phaser.GameObjects.Image) {
+                    const angle = Phaser.Math.Angle.Between(
+                        lastPos.x, lastPos.y,
+                        currentPos.x, currentPos.y
+                    );
+                    arrow.setRotation(angle);
+                }
+                
+                lastPos = { x: currentPos.x, y: currentPos.y };
+            },
+            onComplete: () => {
+                // 检查目标是否仍然存活并在合理范围内
+                if (target.isAlive()) {
+                    const finalTargetPos = target.getPosition();
+                    const hitDistance = CombatUtils.getDistance(
+                        { x: arrow.x, y: arrow.y },
+                        finalTargetPos
+                    );
+                    
+                    // 如果箭矢落点在目标附近（50像素范围内），则命中
+                    if (hitDistance <= 50) {
+                        // 创建命中特效
+                        const hitEffect = this.scene.add.rectangle(
+                            finalTargetPos.x, finalTargetPos.y, 
+                            20, 20, 0xFF0000, 0.7
+                        );
+                        
+                        this.scene.tweens.add({
+                            targets: hitEffect,
+                            alpha: 0,
+                            scaleX: 2,
+                            scaleY: 2,
+                            duration: 300,
+                            ease: 'Power2',
+                            onComplete: () => {
+                                hitEffect.destroy();
+                            }
+                        });
+                        
+                        console.log(`Arrow hit target at distance ${hitDistance.toFixed(1)} pixels`);
+                    } else {
+                        console.log(`Arrow missed target by ${hitDistance.toFixed(1)} pixels`);
                     }
-                });
+                }
                 
                 arrow.destroy();
             }

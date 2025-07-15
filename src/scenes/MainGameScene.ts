@@ -471,6 +471,14 @@ export class MainGameScene extends Scene {
             }
         }
         
+        if (event.code === 'KeyA') {
+            // 强制生成一个建好的弓箭塔
+            if (this.buildingManager) {
+                this.forceCreateArrowTower();
+                console.log('Force created arrow tower');
+            }
+        }
+        
         if (event.code === 'Escape') {
             // 返回主菜单
             this.returnToMainMenu();
@@ -578,6 +586,30 @@ export class MainGameScene extends Scene {
         // 更新地面动画
         if (this.landAnimation) {
             this.landAnimation.update(delta);
+        }
+    }
+    
+    private forceCreateArrowTower() {
+        // 强制创建一个建好的弓箭塔，跳过建造流程
+        if (this.buildingManager) {
+            // 触发建筑地基放置事件，模拟购买弓箭塔
+            this.events.emit('building-foundation-place', {
+                productId: 'arrow_tower_debug',
+                productType: 'arrow_tower',
+                productName: '弓箭塔(调试)'
+            });
+            console.log('Force created arrow tower via foundation placement');
+            
+            // 等待一点时间让地基创建完成，然后直接完成建造
+            setTimeout(() => {
+                const tasks = this.buildingManager.getBuildingTasks();
+                console.log(`Found ${tasks.length} building tasks`);
+                if (tasks.length > 0) {
+                    const task = tasks[0];
+                    console.log(`Force completing building task: ${task.id}`);
+                    this.buildingManager.completeBuilding(task.id);
+                }
+            }, 100);
         }
     }
     

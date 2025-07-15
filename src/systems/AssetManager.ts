@@ -208,6 +208,9 @@ export class AssetManager {
             { key: 'lava', type: 'image', path: '/assets/images/lava.png' },
             { key: 'sand', type: 'image', path: '/assets/images/sand.png' },
             
+            // 弓箭矢图片 (用于弓箭塔攻击特效)
+            { key: 'arrow', type: 'image', path: '/assets/images/arrow.png' },
+            
             // 角色图片
             { key: 'dwarf_character', type: 'image', path: '/assets/images/processed_frame_1 1.png' },
             
