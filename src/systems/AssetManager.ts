@@ -227,6 +227,9 @@ export class AssetManager {
             // 弓箭塔建造动画 (100帧，20fps)
             { key: 'arrow_tower_build', type: 'frameSequence', path: '/assets/animations/buildings/arrow_tower/build', frameCount: 100, fileExtension: 'png', namePattern: 'processed_frame_' },
             
+            // 弓箭塔待机动画 (101帧，20fps)
+            { key: 'arrow_tower_idle', type: 'frameSequence', path: '/assets/animations/arrow_tower/idle', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            
             // 地面微风动画 (101帧，20fps)
             { key: 'land_wind', type: 'frameSequence', path: '/assets/animations/backgrounds/land/wind', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             

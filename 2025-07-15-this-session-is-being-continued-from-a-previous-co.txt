@@ -1,0 +1,1302 @@
+╭───────────────────────────────────────────────────╮
+│ ✻ Welcome to Claude Code!                         │
+│                                                   │
+│   /help for help, /status for your current setup  │
+│                                                   │
+│   cwd: /Users/linsongzi/Documents/Magic Same      │
+╰───────────────────────────────────────────────────╯
+
+⏺ Compact summary (ctrl+r to expand)
+  ⎿  Read src/entities/Dwarf.ts (100+ lines)
+  ⎿  Read src/managers/BuildingManager.ts (678 lines)
+  ⎿  Read src/entities/Shop.ts (496 lines)
+  ⎿  Read src/scenes/MainGameScene.ts (565 lines)
+  ⎿  Read src/entities/BuildingConstruction.ts (172 lines)
+  ⎿  Todo list read (3 items)
+
+> /compact 
+  ⎿  Compacted. ctrl+r to see full summary
+
+> 地基出现没问题了，但现在矮人还是没有检测到任务；请你深度思考，逐步排查问题
+
+✻ Thinking…
+
+  用户说地基出现没问题了，但是矮人还是没有检测到任务。让我深度思考并逐步排查问题。
+
+  从之前的代码来看：
+
+  1. Shop.ts 在购买时触发了 'building-foundation-place' 事件
+  2. BuildingManager.ts 监听这个事件，创建地基和建造任务
+  3. BuildingManager 应该触发 'building-task-created' 事件
+  4. 矮人应该监听这个事件或主动检查建造任务
+
+  让我检查矮人的状态机逻辑，看看为什么没有进入BUILD状态。
+
+  从Dwarf.ts的前100行代码来看，矮人有以下状态：
+  - IDLE
+  - GATHER  
+  - DELIVER
+  - BUILD
+  - COMBAT
+
+  优先级应该是 COMBAT > BUILD > DELIVER > GATHER > IDLE
+
+  让我继续读取Dwarf.ts的更多内容，特别是状态转换逻辑。
+
+⏺ 我来深度分析为什么矮人没有检测到建造任务。让我逐步排查问题。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 200 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  我看到了 evaluateTransitions 方法，在第479行有 hasPendingBuild() 的检查。让我查看这个方法的实现。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 200 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  现在我找到了问题的关键！在 hasPendingBuild() 方法中（第950-979行），矮人正在尝试获取 buildingManager 并查看建造任务。但是它使用的是 (this.scene as any).buildingManager。
+
+  让我检查一下MainGameScene中buildingManager的创建位置，看看是否正确地暴露给了场景。
+
+⏺ Search(pattern: "buildingManager", path: "src/scenes/MainGameScene.ts", output_mode: "content")
+  ⎿  Found 4 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  发现问题了！buildingManager 是 MainGameScene 的私有属性，不能通过 (this.scene as any).buildingManager 访问。
+
+  让我检查一下 DwarfManager 是如何创建的，并看看是否可以通过其他方式访问 buildingManager。
+
+⏺ Read(src/managers/DwarfManager.ts)
+  ⎿  Read 100 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  现在我明白了问题所在。矮人无法访问 buildingManager 是因为：
+
+  1. buildingManager 是 MainGameScene 的私有属性，不能通过 (this.scene as any).buildingManager 访问
+  2. 矮人需要一种方式来访问 buildingManager
+
+  有几种解决方案：
+  1. 将 buildingManager 设置为 MainGameScene 的公共属性
+  2. 通过事件系统传递 buildingManager 的引用
+  3. 使用 WorldTaskManager 作为中介来管理建造任务
+
+  最简单的解决方案是将 buildingManager 从 private 改为 public。
+
+⏺ 找到问题了！矮人无法检测到建造任务的原因是：
+
+  1. 访问权限问题：buildingManager 在 MainGameScene 中是 private 属性，矮人无法通过 (this.scene as any).buildingManager 访问到它。
+  2. 缺少引用传递：矮人没有正确的方式获取到 BuildingManager 实例。
+
+  让我修复这个问题：
+
+⏺ Update(src/scenes/MainGameScene.ts)
+  ⎿  Updated src/scenes/MainGameScene.ts with 1 addition and 1 removal
+       18        private assetManager!: AssetManager;
+       19        private match3System!: Match3System;
+       20        private shop!: Shop;
+       21 -      private buildingManager!: BuildingManager;
+       21 +      public buildingManager!: BuildingManager;
+       22        private dwarfManager!: DwarfManager;
+       23        private monsterManager!: MonsterManager;
+       24        private gameStateManager!: GameStateManager;
+
+✻ Thinking…
+
+  好，第一步完成了。现在让我检查矮人的 enterBuild 方法，看看它是如何处理建造任务的。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 100 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  好的，现在我看到 enterBuild 方法也是使用 (this.scene as any).buildingManager 来访问。由于我们已经将 buildingManager 改为 public，现在应该可以访问了。
+
+  让我继续检查 executeBuild 方法，看看矮人到达建筑位置后会做什么。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  现在我已经找到了所有的关键代码。总结一下完整的流程：
+
+  1. Shop 购买后触发 'building-foundation-place' 事件 ✓
+  2. BuildingManager 接收事件，创建地基和建造任务 ✓
+  3. BuildingManager 维护建造任务列表 ✓
+  4. Dwarf 在 hasPendingBuild() 中检查建造任务
+  5. Dwarf 使用 (this.scene as any).buildingManager 访问 BuildingManager
+
+  由于我们已经将 buildingManager 从 private 改为 public，现在矮人应该能够访问了。
+
+  但是还有一个潜在的问题：矮人的 update 循环中可能没有正确调用。让我检查一下 DwarfManager 的 update 方法。
+
+⏺ Read(src/managers/DwarfManager.ts)
+  ⎿  Read 100 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  让我找到 DwarfManager 的 update 方法。
+
+⏺ Search(pattern: "update.*delta", path: "src/managers/DwarfManager.ts", output_mode: "content")
+  ⎿  Found 3 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  好，让我看看完整的 update 方法。
+
+⏺ Read(src/managers/DwarfManager.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  好的，看起来 DwarfManager 的 update 方法正确地调用了每个矮人的 update。
+
+  现在让我添加一些调试日志，看看为什么矮人没有检测到任务。主要问题可能是：
+
+  1. BuildingManager 确实创建了任务吗？
+  2. 矮人的 hasPendingBuild() 方法是否正确执行？
+  3. buildingManager 引用是否正确？
+
+  让我在关键位置添加更多的调试日志。
+
+⏺ 让我添加一些调试日志来深入排查问题：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 13 additions and 3 removals                                                                     
+       954            }
+       955            
+       956            // 尝试分配新的建造任务
+       957 -          const buildingManager = (this.scene as any).buildingManager;
+       957 +          const mainScene = this.scene as any;
+       958 +          console.log(`[Dwarf ${this.id}] hasPendingBuild - 场景类型: ${this.scene.constructor.name}`);
+       959 +          console.log(`[Dwarf ${this.id}] hasPendingBuild - buildingManager存在: ${!!mainScene.buildingManager}`);
+       960 +          
+       961 +          const buildingManager = mainScene.buildingManager;
+       962            if (buildingManager) {
+       963                // 调试：查看所有建造任务
+       964                const allTasks = buildingManager.getBuildingTasks();
+       965                console.log(`[Dwarf ${this.id}] 检查建造任务，总数: ${allTasks.length}`);
+       966                
+       967 +              if (allTasks.length > 0) {
+       968 +                  console.log(`[Dwarf ${this.id}] 所有建造任务详情:`, JSON.stringify(allTasks, null, 2));
+       969 +              }
+       970 +              
+       971                const waitingTasks = allTasks.filter((task: any) => task.status === 'waiting_for_dwarf');
+       972                if (waitingTasks.length > 0) {
+       973                    console.log(`[Dwarf ${this.id}] 发现 ${waitingTasks.length} 个待建造任务`, waitingTasks);
+     ...
+       968                const assignedTask = buildingManager.tryAssignBuildingTask(this.id);
+       969                if (assignedTask) {
+       970                    this.targetBuildId = assignedTask.id;
+       971 -                  console.log(`[Dwarf ${this.id}] 分配到建造任务: ${assignedTask.productName}`);
+       971 +                  console.log(`[Dwarf ${this.id}] 成功分配到建造任务: ${assignedTask.productName}, ID: ${assignedTask.id}`);
+       972                    return true;
+       973 +              } else {
+       974 +                  console.log(`[Dwarf ${this.id}] tryAssignBuildingTask 返回 null`);
+       975                }
+       976            } else {
+       977 -              console.log(`[Dwarf ${this.id}] 无法获取 buildingManager`);
+       977 +              console.log(`[Dwarf ${this.id}] 无法获取 buildingManager，场景对象:`, Object.keys(mainScene));
+       978            }
+       979            
+       980            return false;
+
+✻ Thinking…
+
+  现在让我再添加一些调试日志到 evaluateTransitions 方法中，看看建筑检查是否被执行。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 4 additions                                                                                                                  
+       476            }
+       477            
+       478            // 2. 建筑优先级（优先级=4）
+       479 +          console.log(`[Dwarf ${this.id}] evaluateTransitions - 检查建筑任务...`);
+       480            const hasBuildTask = this.hasPendingBuild();
+       481 +          console.log(`[Dwarf ${this.id}] evaluateTransitions - hasBuildTask: ${hasBuildTask}, 当前状态: ${this.state}, 当前优先级: ${currentPriority}`);
+       482 +          
+       483            if (hasBuildTask) {
+       484                // 只有当前状态优先级低于建筑时才切换
+       485                if (currentPriority < 4) {
+     ...
+       485                    return;
+       486                } else if (this.state === DwarfState.BUILD) {
+       487                    // 保持建筑状态
+       488 +                  console.log(`[Dwarf ${this.id}] 保持 BUILD 状态`);
+       489                    return;
+       490                }
+       491            }
+
+✻ Thinking…
+
+  现在让我也在 update 方法中添加调试日志，看看是否正确调用了 evaluateTransitions。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  让我找到 update 方法的开始部分。
+
+⏺ Search(pattern: "public update.*delta", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 21 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  好的，我看到 update 方法正确地调用了 evaluateTransitions。现在让我添加一个日志来确认 update 方法被调用的频率。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 5 additions                                             
+       360         * 更新矮人逻辑 - 新状态机架构
+       361         */
+       362        public update(delta: number): void {
+       363 +          // 定期输出调试信息
+       364 +          if (Math.random() < 0.001) { // 0.1% 概率，避免日志过多
+       365 +              console.log(`[Dwarf ${this.id}] update called, state: ${this.state}`);
+       366 +          }
+       367 +          
+       368            // 1. 更新感知系统
+       369            this.updatePerception(delta);
+       370            
+
+✻ Thinking…
+
+  现在让我检查一下是否有其他问题。我注意到在 evaluateTransitions 方法中，日志输出可能太频繁了。让我稍微调整一下，只在有建造任务时输出日志。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 additions and 2 removals                                                                                                   
+       481            }
+       482            
+       483            // 2. 建筑优先级（优先级=4）
+       484 -          console.log(`[Dwarf ${this.id}] evaluateTransitions - 检查建筑任务...`);
+       484            const hasBuildTask = this.hasPendingBuild();
+       485 -          console.log(`[Dwarf ${this.id}] evaluateTransitions - hasBuildTask: ${hasBuildTask}, 当前状态: ${this.state}, 当前优先级: ${currentPriority}`);
+       485 +          if (hasBuildTask) {
+       486 +              console.log(`[Dwarf ${this.id}] evaluateTransitions - 发现建筑任务！当前状态: ${this.state}, 当前优先级: ${currentPriority}`);
+       487 +          }
+       488            
+       489            if (hasBuildTask) {
+       490                // 只有当前状态优先级低于建筑时才切换
+
+✻ Thinking…
+
+  让我再检查一下 BuildingConstruction 的监听事件，确保建造完成事件正确触发。
+
+⏺ Search(pattern: "building-animation-complete", path: "src/entities", output_mode: "content")
+  ⎿  Found 1 line (ctrl+r to expand)
+
+✻ Thinking…
+
+  让我再检查矮人是否监听了这个事件。
+
+⏺ Search(pattern: "building-animation-complete|building-completed", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 1 line (ctrl+r to expand)
+
+✻ Thinking…
+
+  好的，看起来矮人监听的是 'building-completed' 事件，而不是 'building-animation-complete'。让我检查一下 handleBuildingCompleted 方法。
+
+⏺ Search(pattern: "handleBuildingCompleted", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 43 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  现在我看到矮人有监听 'building-task-created' 事件。让我检查一下这个事件的处理逻辑。从代码看，矮人只是记录了日志，新的状态机应该自动检测任务。
+
+  让我回顾一下整个流程：
+  1. Shop 触发 'building-foundation-place' 事件
+  2. BuildingManager 创建地基和任务，触发 'building-task-created' 事件  
+  3. 矮人的 evaluateTransitions 每帧调用 hasPendingBuild() 检查任务
+  4. hasPendingBuild() 通过 buildingManager.tryAssignBuildingTask() 获取任务
+
+  现在问题可能是矮人无法正确访问 buildingManager。我们已经将它改为 public 了，现在让我运行游戏看看调试日志输出什么。
+
+  总结一下我们做的修改：
+  1. 将 MainGameScene.buildingManager 从 private 改为 public
+  2. 在 Dwarf.hasPendingBuild() 添加了详细的调试日志
+  3. 在 Dwarf.evaluateTransitions() 添加了建造任务检测日志
+  4. 在 Dwarf.update() 添加了定期状态日志
+
+  现在用户应该运行游戏，购买一个建筑，然后查看控制台日志来了解具体问题。
+
+⏺ 我已经完成了深度排查并添加了详细的调试日志。问题的关键在于矮人无法访问 buildingManager。
+
+  我做的修改：
+
+  1. 修复访问权限：将 MainGameScene.buildingManager 从 private 改为 public
+  2. 添加调试日志：
+    - 在 hasPendingBuild() 中添加了详细日志，显示场景类型、buildingManager 是否存在、任务数量等
+    - 在 evaluateTransitions() 中添加了建造任务检测日志
+    - 在 update() 中添加了定期状态输出
+
+  完整的建造流程应该是：
+  1. Shop 购买 → 触发 building-foundation-place 事件 ✓
+  2. BuildingManager 接收事件 → 创建地基和任务 ✓
+  3. 矮人每帧调用 evaluateTransitions() → 调用 hasPendingBuild() 检查任务
+  4. 发现任务后 → 切换到 BUILD 状态 → 移动到建筑位置 → 开始建造
+
+  现在请运行游戏并购买一个建筑，然后查看控制台输出的调试信息，特别关注：
+  - buildingManager存在: 是否为 true
+  - 检查建造任务，总数: 是否大于 0
+  - 是否有 无法获取 buildingManager 的错误
+
+  这些日志会帮助我们定位具体是哪一步出了问题。
+
+> 这就奇了怪了，这个逻辑又这么难吗，还是没有修复；不能这样吗？矮人的状态if里，检查到有地基，就进入建造，不行吗
+
+⏺ 你说得对！我们把问题复杂化了。直接检查地基存在就进入建造状态，这样更简单直接。
+
+  让我重新实现这个逻辑：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 19 additions and 27 removals                                                                     
+        963                return true;
+        964            }
+        965            
+        966 -          // 尝试分配新的建造任务
+        966 +          // 简单直接：检查是否有地基存在
+        967            const mainScene = this.scene as any;
+        968 -          console.log(`[Dwarf ${this.id}] hasPendingBuild - 场景类型: ${this.scene.constructor.name}`);
+        969 -          console.log(`[Dwarf ${this.id}] hasPendingBuild - buildingManager存在: ${!!mainScene.buildingManager}`);
+        970 -          
+        968            const buildingManager = mainScene.buildingManager;
+        969 -          if (buildingManager) {
+        970 -              // 调试：查看所有建造任务
+        971 -              const allTasks = buildingManager.getBuildingTasks();
+        972 -              console.log(`[Dwarf ${this.id}] 检查建造任务，总数: ${allTasks.length}`);
+        973 -              
+        974 -              if (allTasks.length > 0) {
+        975 -                  console.log(`[Dwarf ${this.id}] 所有建造任务详情:`, JSON.stringify(allTasks, null, 2));
+        969 +          
+        970 +          if (!buildingManager) {
+        971 +              return false;
+        972 +          }
+        973 +          
+        974 +          // 获取所有建造任务
+        975 +          const allTasks = buildingManager.getBuildingTasks();
+        976 +          
+        977 +          // 找到第一个未分配的任务
+        978 +          for (const task of allTasks) {
+        979 +              if (task.status === 'waiting_for_dwarf' && !task.assignedDwarfId) {
+        980 +                  // 直接分配任务
+        981 +                  const assigned = buildingManager.tryAssignBuildingTask(this.id);
+        982 +                  if (assigned) {
+        983 +                      this.targetBuildId = assigned.id;
+        984 +                      console.log(`[Dwarf ${this.id}] 发现地基，分配建造任务: ${assigned.productName}`);
+        985 +                      return true;
+        986 +                  }
+        987                }
+        988 -              
+        989 -              const waitingTasks = allTasks.filter((task: any) => task.status === 'waiting_for_dwarf');
+        990 -              if (waitingTasks.length > 0) {
+        991 -                  console.log(`[Dwarf ${this.id}] 发现 ${waitingTasks.length} 个待建造任务`, waitingTasks);
+        992 -              }
+        993 -              
+        994 -              const assignedTask = buildingManager.tryAssignBuildingTask(this.id);
+        995 -              if (assignedTask) {
+        996 -                  this.targetBuildId = assignedTask.id;
+        997 -                  console.log(`[Dwarf ${this.id}] 成功分配到建造任务: ${assignedTask.productName}, ID: ${assignedTask.id}`);
+        998 -                  return true;
+        999 -              } else {
+       1000 -                  console.log(`[Dwarf ${this.id}] tryAssignBuildingTask 返回 null`);
+       1001 -              }
+       1002 -          } else {
+       1003 -              console.log(`[Dwarf ${this.id}] 无法获取 buildingManager，场景对象:`, Object.keys(mainScene));
+        988            }
+        989            
+        990            return false;
+
+⏺ 现在让我再检查一下建造状态的执行逻辑，确保矮人能正确移动到地基位置：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Error: String to replace not found in file.
+     String:     /**
+          * 执行建造状态
+          */
+         private executeBuild(delta: number): void {
+             if (!this.targetBuildId) {
+                 console.log(`[Dwarf ${this.id}] 建造状态但没有目标建筑`);
+                 return;
+             }
+             
+     … +49 lines (ctrl+r to see all)
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ 让我再简化一下进入建造状态的逻辑：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 15 additions and 3 removals                                                                                   
+       647            this.abortCurrentAction();
+       648            this.state = DwarfState.BUILD;
+       649            
+       650 +          console.log(`[Dwarf ${this.id}] 进入建筑状态，targetBuildId: ${this.targetBuildId}`);
+       651 +          
+       652            // 获取已分配的建造任务
+       653            if (this.targetBuildId) {
+       654                const buildingManager = (this.scene as any).buildingManager;
+       655                if (buildingManager) {
+       656 -                  const buildingTask = buildingManager.getBuildingTasks().find((task: any) => task.id === this.targetBuildId);
+       656 +                  const buildingTasks = buildingManager.getBuildingTasks();
+       657 +                  console.log(`[Dwarf ${this.id}] 所有建造任务:`, buildingTasks);
+       658 +                  
+       659 +                  const buildingTask = buildingTasks.find((task: any) => task.id === this.targetBuildId);
+       660                    if (buildingTask) {
+       661                        // 移动到建筑位置
+       662                        const buildPos = buildingTask.position;
+       663 -                      this.moveToTarget(buildPos.x + 81, this.GROUND_Y); // 移动到建筑中心
+       664 -                      console.log(`[Dwarf ${this.id}] 进入建筑状态，目标: ${buildingTask.productName} at (${buildPos.x}, ${buildPos.y})`);
+       663 +                      const targetX = buildPos.x + 81; // 移动到建筑中心
+       664 +                      this.moveToTarget(targetX, this.GROUND_Y); 
+       665 +                      console.log(`[Dwarf ${this.id}] 移动到建筑位置: ${buildingTask.productName} at x=${targetX}`);
+       666 +                  } else {
+       667 +                      console.error(`[Dwarf ${this.id}] 找不到建造任务 ${this.targetBuildId}`);
+       668                    }
+       669 +              } else {
+       670 +                  console.error(`[Dwarf ${this.id}] 无法获取 buildingManager`);
+       671                }
+       672 +          } else {
+       673 +              console.error(`[Dwarf ${this.id}] 进入建筑状态但没有 targetBuildId`);
+       674            }
+       675            
+       676            this.updateStatusDisplay();
+
+⏺ 现在让我检查一下矮人是否正确创建并添加到场景中：
+
+⏺ Read(src/managers/DwarfManager.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+⏺ 看起来矮人的精灵没有被添加到容器中。让我检查一下 Dwarf 类的精灵创建：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 现在我需要确保矮人的精灵被添加到容器中：
+
+⏺ Update(src/managers/DwarfManager.ts)
+  ⎿  Updated src/managers/DwarfManager.ts with 7 additions and 1 removal                        
+       65            const dwarfId = `dwarf_${this.nextDwarfId++}`;
+       66            const dwarf = new Dwarf(this.scene, dwarfId, position.x, position.y);
+       67            
+       68 +          // 添加矮人精灵到容器
+       69 +          const dwarfSprite = dwarf.getSprite();
+       70 +          if (dwarfSprite) {
+       71 +              this.container.add(dwarfSprite);
+       72 +          }
+       73 +          
+       74            this.dwarfs.set(dwarfId, dwarf);
+       75            
+       76 -          console.log(`Spawned dwarf: ${dwarfId}`);
+       76 +          console.log(`Spawned dwarf: ${dwarfId} at (${position.x}, ${position.y})`);
+       77            return dwarf;
+       78        }
+       79    
+
+⏺ 现在我需要添加 getSprite 方法到 Dwarf 类：
+
+⏺ Search(pattern: "getSprite", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 0 lines 
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Error: String to replace not found in file.
+     String:     /**
+          * 获取矮人位置
+          */
+         public getPosition(): { x: number; y: number } {
+             return { x: this.x, y: this.y };
+         }
+         
+         /**
+          * 获取矮人状态
+     … +4 lines (ctrl+r to see all)
+
+⏺ Search(pattern: "getPosition.*{", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 0 lines 
+
+⏺ Search(pattern: "public.*getState", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 11 lines (ctrl+r to expand)
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 7 additions                          
+       1097        }
+       1098        
+       1099        /**
+       1100 +       * 获取精灵对象
+       1101 +       */
+       1102 +      public getSprite(): Phaser.GameObjects.GameObject | null {
+       1103 +          return this.sprite || null;
+       1104 +      }
+       1105 +      
+       1106 +      /**
+       1107         * 检查矮人是否空闲
+       1108         */
+       1109        public isIdle(): boolean {
+
+⏺ 现在让我再添加一个简单的调试输出，看看 update 是否被调用：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 2 additions and 2 removals                                                                                      
+       361         */
+       362        public update(delta: number): void {
+       363            // 定期输出调试信息
+       364 -          if (Math.random() < 0.001) { // 0.1% 概率，避免日志过多
+       365 -              console.log(`[Dwarf ${this.id}] update called, state: ${this.state}`);
+       364 +          if (Math.random() < 0.01) { // 1% 概率
+       365 +              console.log(`[Dwarf ${this.id}] update called, state: ${this.state}, position: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
+       366            }
+       367            
+       368            // 1. 更新感知系统
+
+⏺ 我已经完成了所有必要的修改。现在的逻辑已经大大简化：
+
+  主要改动：
+
+  1. 简化了 hasPendingBuild() 方法：
+    - 直接检查是否有地基（未分配的建造任务）
+    - 找到后立即分配给矮人并返回 true
+  2. 修复了矮人精灵的显示问题：
+    - 在 DwarfManager.spawnDwarf() 中添加了将矮人精灵加入容器的代码
+    - 添加了 getSprite() 方法以获取矮人精灵
+  3. 添加了详细的调试日志：
+    - 矮人状态更新的定期输出
+    - 建造任务检测和分配的日志
+    - 进入建造状态时的详细信息
+
+  现在的流程是：
+  1. 购买建筑 → 创建地基和建造任务
+  2. 矮人每帧调用 hasPendingBuild() 检查是否有地基
+  3. 发现地基 → 分配任务 → 进入 BUILD 状态
+  4. 移动到建筑位置 → 开始建造动画
+  5. 建造完成 → 创建建筑
+
+  请再次运行游戏，购买一个建筑，然后查看控制台日志。你应该能看到：
+  - 矮人的定期状态更新
+  - "发现地基，分配建造任务" 的日志
+  - "进入建筑状态" 的日志
+  - 移动到建筑位置的日志
+
+  如果还是不行，请告诉我具体的错误信息。
+
+> DwarfManager received building request: 弓箭塔
+  Dwarf.ts:314 [Dwarf dwarf_1] 收到建筑购买通知: 弓箭塔
+  Dwarf.ts:314 [Dwarf dwarf_2] 收到建筑购买通知: 弓箭塔
+  Dwarf.ts:314 [Dwarf dwarf_3] 收到建筑购买通知: 弓箭塔
+  MainGameScene.ts:499 Building purchased: 弓箭塔 (arrow_tower)
+  BuildingManager.ts:154 [BuildingManager] handleFoundationPlace called for 弓箭塔
+  BuildingManager.ts:198 Foundation created at (209, 630) with size 162x162
+  BuildingManager.ts:172 [BuildingManager] Created building task build_1, total tasks: 1
+  Dwarf.ts:322 [Dwarf dwarf_1] 收到建造任务: 弓箭塔
+  Dwarf.ts:322 [Dwarf dwarf_2] 收到建造任务: 弓箭塔
+  Dwarf.ts:322 [Dwarf dwarf_3] 收到建造任务: 弓箭塔
+  BuildingManager.ts:181 [BuildingManager] Foundation placed for 弓箭塔 at (209, 630)
+  Shop.ts:217 Purchased 弓箭塔 for Object
+  Shop.ts:218 Triggered building-foundation-place event for 弓箭塔
+  BuildingManager.ts:305 Building task build_1 assigned to dwarf dwarf_1
+  Dwarf.ts:996 [Dwarf dwarf_1] 发现地基，分配建造任务: 弓箭塔
+  Dwarf.ts:486 [Dwarf dwarf_1] evaluateTransitions - 发现建筑任务！当前状态: idle, 当前优先级: 1
+  Dwarf.ts:492 [Dwarf dwarf_1] 从 idle 切换到 BUILD 状态
+  Dwarf.ts:650 [Dwarf dwarf_1] 进入建筑状态，targetBuildId: null
+  Dwarf.ts:673 [Dwarf dwarf_1] 进入建筑状态但没有 targetBuildId
+  enterBuild @ Dwarf.ts:673
+  Dwarf.ts:708 [Dwarf dwarf_1] 进入待机状态
+
+⏺ 找到问题了！矮人成功检测到了建造任务，但是在进入建造状态时 targetBuildId 是 null。
+
+  问题在于 hasPendingBuild() 中分配任务后设置了 this.targetBuildId，但是 enterBuild() 被调用时 targetBuildId 却是 null。
+
+  让我检查一下 abortCurrentAction() 是否清除了 targetBuildId：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+⏺ 找到问题了！abortCurrentAction() 清除了 targetBuildId。当进入建造状态时，它先调用 abortCurrentAction() 清除了所有目标，包括刚刚分配的 targetBuildId。
+
+  让我修复这个问题：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 6 additions                                                        
+       644        private enterBuild(): void {
+       645            if (this.state === DwarfState.BUILD) return;
+       646            
+       647 +          // 保存当前的 targetBuildId，因为 abortCurrentAction 会清除它
+       648 +          const savedTargetBuildId = this.targetBuildId;
+       649 +          
+       650            this.abortCurrentAction();
+       651            this.state = DwarfState.BUILD;
+       652            
+       653 +          // 恢复 targetBuildId
+       654 +          this.targetBuildId = savedTargetBuildId;
+       655 +          
+       656            console.log(`[Dwarf ${this.id}] 进入建筑状态，targetBuildId: ${this.targetBuildId}`);
+       657            
+       658            // 获取已分配的建造任务
+
+⏺ 完美！我找到并修复了问题。问题在于：
+
+  1. hasPendingBuild() 检测到建造任务并设置了 this.targetBuildId = assigned.id
+  2. evaluateTransitions() 发现有建造任务，调用 enterBuild()
+  3. enterBuild() 首先调用 abortCurrentAction()，这会清除所有目标，包括刚设置的 targetBuildId
+  4. 所以当后续代码尝试使用 targetBuildId 时，它已经是 null 了
+
+  修复方案：
+  在 enterBuild() 中，先保存 targetBuildId，调用 abortCurrentAction() 后再恢复它。
+
+  现在再运行游戏，矮人应该能够正确进入建造状态并移动到建筑位置了！
+
+> 很好，解决了！但现在还有两个小问题：似乎矮人结束建造状态比建造动画结束的要早，矮人应该要等建筑物建造动画播完后结束建造状态，然后就是矮人的层级应该在建筑物前面
+
+⏺ 好的，我来解决这两个问题：
+
+  1. 矮人建造状态结束时机问题
+  2. 矮人层级问题
+
+  先解决建造状态结束时机问题：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+⏺ 看起来矮人已经监听了 building-completed 事件。让我检查建造动画完成的事件：
+
+⏺ Read(src/entities/BuildingConstruction.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 我看到建造动画完成时会触发 building-animation-complete 事件，但矮人监听的是 building-completed 事件。让我检查 BuildingManager 的 completeBuilding 方法：
+
+⏺ Search(pattern: "building-completed", path: "src/managers/BuildingManager.ts", output_mode: "content")
+  ⎿  Found 11 lines (ctrl+r to expand)
+
+⏺ 好的，事件流程是正确的。现在让我检查为什么矮人会提前结束建造状态。让我看看 executeBuild 方法：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 我看到 executeBuild 在建造过程中只是保持状态，这是正确的。让我检查 evaluateTransitions 中是否有问题：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+⏺ 现在我看到问题了。当矮人在 BUILD 状态但 targetBuildId 为 null 时，它会继续评估其他任务，这可能导致它过早地切换到其他状态。
+
+  现在解决层级问题，先检查矮人的深度设置：
+
+⏺ Search(pattern: "setDepth", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 0 lines 
+
+⏺ 让我给矮人设置合适的深度：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 additions               
+        97                this.sprite.setOrigin(0.5, 1);
+        98                this.sprite.setStrokeStyle(2, 0x000000);
+        99            }
+       100 +          
+       101 +          // 设置矮人深度，确保在建筑物前面
+       102 +          this.sprite.setDepth(100);
+       103        }
+       104    
+       105        /**
+
+⏺ 现在让我修复建造状态过早结束的问题。问题可能是在 evaluateTransitions 中，当建造任务正在进行时，不应该切换到其他状态：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 6 additions                                                          
+       505            // 如果当前在建筑状态但没有建筑任务了，继续评估
+       506            if (this.state === DwarfState.BUILD && !this.targetBuildId) {
+       507                // 建筑完成，继续评估其他任务
+       508 +              console.log(`[Dwarf ${this.id}] BUILD 状态但没有 targetBuildId，继续评估其他任务`);
+       509            }
+       510            
+       511 +          // 如果当前在建造状态且有任务，保持状态
+       512 +          if (this.state === DwarfState.BUILD && this.targetBuildId) {
+       513 +              return;  // 保持建造状态直到完成
+       514 +          }
+       515 +          
+       516            // 3. 交付优先级（优先级=3）
+       517            if (this.inventory.size > 0) {
+       518                // 只有当前状态优先级低于交付时才切换
+
+⏺ 现在让我检查建筑的深度设置，确保矮人在建筑前面：
+
+⏺ Search(pattern: "setDepth", path: "src/managers/BuildingManager.ts", output_mode: "content")
+  ⎿  Found 0 lines 
+
+⏺ 让我检查建筑精灵的创建：
+
+⏺ Read(src/managers/BuildingManager.ts)
+  ⎿  Read 15 lines (ctrl+r to expand)
+
+⏺ 让我给地基设置深度：
+
+⏺ Update(src/managers/BuildingManager.ts)
+  ⎿  Updated src/managers/BuildingManager.ts with 1 addition                                        
+       191            const foundation = this.scene.add.image(position.x, position.y, 'foundation');
+       192            foundation.setOrigin(0, 0); // 与建筑一致，左上角对齐
+       193            foundation.setDisplaySize(162, 162); // 与弓箭塔建筑一样的大小
+       194 +          foundation.setDepth(10); // 地基在后面
+       195            
+       196            this.container.add(foundation);
+       197            this.foundations.set(`${position.x}_${position.y}`, foundation);
+
+⏺ 让我检查建筑的深度设置：
+
+⏺ Read(src/managers/BuildingManager.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 让我给建筑设置深度：
+
+⏺ Update(src/managers/BuildingManager.ts)
+  ⎿  Updated src/managers/BuildingManager.ts with 3 additions                            
+       418                this.sprite.setOrigin(0, 0);
+       419                this.sprite.setStrokeStyle(2, 0x000000);
+       420            }
+       421 +          
+       422 +          // 设置建筑深度，确保在矮人后面
+       423 +          this.sprite.setDepth(50);
+       424    
+       425            // Figma中没有建筑名称显示，创建隐藏文本以兼容现有代码
+       426            this.nameText = this.scene.add.text(0, 0, '', { fontSize: '1px' });
+
+⏺ 现在让我设置建造动画的深度：
+
+⏺ Update(src/entities/BuildingConstruction.ts)
+  ⎿  Updated src/entities/BuildingConstruction.ts with 3 additions                           
+       52                    this.sprite.setVisible(false);
+       53                    this.sprite.setDisplaySize(162, 162);
+       54                }
+       55 +              
+       56 +              // 设置建造动画深度，在地基和建筑之间
+       57 +              this.sprite.setDepth(30);
+       58            } catch (error) {
+       59                console.error('Error creating BuildingConstruction sprite:', error);
+       60                // 创建最简单的备用精灵
+
+⏺ 我已经完成了两个问题的修复：
+
+  1. 矮人建造状态结束时机问题
+
+  修改内容：
+  - 在 evaluateTransitions() 中添加了检查：如果矮人在 BUILD 状态且有 targetBuildId，则保持当前状态，不会切换到其他状态
+  - 这确保矮人会一直保持建造状态，直到收到 building-completed 事件
+
+  2. 层级问题
+
+  设置的深度值：
+  - 地基（Foundation）: depth = 10 (最后面)
+  - 建造动画（BuildingConstruction）: depth = 30 (中间)
+  - 建筑（Building）: depth = 50 (前面)
+  - 矮人（Dwarf）: depth = 100 (最前面)
+
+  这样的层级顺序确保：
+  1. 地基在最后面
+  2. 建造动画在地基前面
+  3. 完成的建筑在建造动画前面
+  4. 矮人始终在最前面，不会被建筑遮挡
+
+  现在再运行游戏，你应该能看到：
+  - 矮人会保持建造状态直到建造动画完全播放完毕
+  - 矮人始终显示在建筑物前面
+
+> 1。现在矮人前往建筑物进行建造的过程中，播放的是idle动画。应该只要矮人有移动，都要播walk的动画 2。现在矮人还是在建筑物后面。请你深度思考一下这个问题，review一下建筑物的显示逻辑，看看到底是为什么
+
+✻ Thinking…
+
+  用户提出了两个问题：
+
+  1. 矮人移动时没有播放walk动画，而是播放idle动画
+  2. 矮人仍然在建筑物后面，需要深入检查建筑物的显示逻辑
+
+  让我先解决第一个问题，检查移动动画的逻辑。然后深入分析第二个问题。
+
+⏺ 好的，我来解决这两个问题。
+
+  1. 首先解决移动动画问题
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  我看到在 updateMovement 中，矮人移动时并没有播放 walk 动画。需要检查 moveToTarget 方法。
+
+⏺ Search(pattern: "moveToTarget", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 149 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  我看到了问题：在 moveToTarget 方法中，如果矮人处于 BUILD 状态，就不会播放 walk 动画。这是问题所在。无论什么状态，只要在移动，都应该播放 walk 动画。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 2 additions and 4 removals              
+       353            this.targetY = this.GROUND_Y; // 忽略y坐标，始终保持在地面
+       354            this.isMoving = true;
+       355            
+       356 -          // 开始移动时播放行走动画（除非在建造状态）
+       357 -          if (this.state !== DwarfState.BUILD) {
+       358 -              this.playAnimation('walk');
+       359 -          }
+       356 +          // 开始移动时播放行走动画
+       357 +          this.playAnimation('walk');
+       358        }
+       359    
+       360        /**
+
+✻ Thinking…
+
+  现在解决了第一个问题。接下来解决第二个问题：矮人仍然在建筑物后面。
+
+  让我深入分析建筑物的显示逻辑。我已经设置了深度值：
+  - 地基: depth = 10
+  - 建造动画: depth = 30  
+  - 建筑: depth = 50
+  - 矮人: depth = 100
+
+  但矮人仍然在建筑后面。可能的原因：
+  1. 建筑物被添加到了不同的容器
+  2. 容器本身有深度设置
+  3. 建筑物的深度设置没有生效
+
+  让我检查容器的创建和深度。
+
+⏺ 2. 深入分析层级问题
+
+  让我检查容器的创建和使用：
+
+⏺ Read(src/scenes/MainGameScene.ts)
+  ⎿  Read 40 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  我看到所有的管理器（建筑管理器、矮人管理器）都使用了同一个 groundContainer。这意味着它们都在同一个容器中，所以深度值应该能正常工作。
+
+  让我检查一下容器本身是否有深度设置。
+
+⏺ Search(pattern: "groundContainer.*setDepth|setDepth.*groundContainer", path: "src/scenes/MainGameScene.ts", output_mode: "content")
+  ⎿  Found 0 lines 
+
+✻ Thinking…
+
+  groundContainer 没有设置深度。让我检查建筑物是否真的被添加到了 container，以及矮人精灵是否被正确添加到了 container。
+
+⏺ Read(src/managers/BuildingManager.ts)
+  ⎿  Read 15 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  我看到建筑精灵被添加到了容器。让我检查完整的建筑创建流程，看看建成的建筑是否也被正确添加到容器。
+
+⏺ Read(src/managers/BuildingManager.ts)
+  ⎿  Read 10 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  建筑也被正确添加到容器了。让我想想...等等，我突然想到一个可能的问题：精灵被添加到容器后，容器内的子对象的深度可能不会按照全局深度工作，而是按照添加顺序。
+
+  让我检查一下 Phaser 的容器是如何处理深度的。在 Phaser 中，Container 内部的对象深度是相对于容器的，而不是相对于场景的。这可能是问题所在。
+
+  让我看看矮人和建筑是否在同一个容器中，以及它们的添加顺序。
+
+⏺ 我发现了问题！在Phaser中，当游戏对象被添加到容器（Container）后，它们的深度（depth）是相对于容器内部的，而不是全局的。容器内的对象按照添加顺序渲染，后添加的会在前面。
+
+  让我检查添加顺序：
+
+⏺ Search(pattern: "container.add", path: "src/managers", output_mode: "content")
+  ⎿  Found 5 lines (ctrl+r to expand)
+
+✻ Thinking…
+
+  问题确认了！建筑和矮人都在同一个容器（groundContainer）中。在容器中，深度值可能不起作用，而是按照添加顺序决定渲染顺序。
+
+  解决方案有两个：
+  1. 确保矮人总是在建筑之后添加到容器
+  2. 或者使用容器的 bringToTop 方法将矮人移到最前面
+
+  让我采用第二种方案，在矮人更新时确保它们始终在最前面。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 5 additions                           
+       420    
+       421            // 更新精灵位置
+       422            this.sprite.setPosition(this.x, this.y);
+       423 +          
+       424 +          // 确保矮人始终在最前面
+       425 +          if (this.sprite.parentContainer) {
+       426 +              this.sprite.parentContainer.bringToTop(this.sprite);
+       427 +          }
+       428        }
+       429    
+       430        /**
+
+✻ Thinking…
+
+  现在我在每次更新位置时都会将矮人移到容器的最前面。但这可能会导致性能问题，因为每帧都要调整顺序。
+
+  让我采用一个更优雅的解决方案：使用不同的容器来分层管理不同类型的对象。
+
+⏺ 让我采用一个更好的解决方案：为不同层级创建不同的容器：
+
+⏺ Update(src/scenes/MainGameScene.ts)
+  ⎿  Updated src/scenes/MainGameScene.ts with 2 additions                                            
+       29        private match3Container!: Phaser.GameObjects.Container;
+       30        private shopContainer!: Phaser.GameObjects.Container;
+       31        private groundContainer!: Phaser.GameObjects.Container;
+       32 +      private buildingContainer!: Phaser.GameObjects.Container;  // 建筑层
+       33 +      private characterContainer!: Phaser.GameObjects.Container;  // 角色层（矮人、怪物）
+       34        private topLayerContainer!: Phaser.GameObjects.Container;  // 顶层容器，用于掉落资源
+       35        
+       36        // 资源显示
+
+✻ Thinking…
+
+  现在我需要修改 createGroundArea 方法，创建这些新容器并按正确的顺序添加它们。
+
+⏺ Update(src/scenes/MainGameScene.ts)
+  ⎿  Updated src/scenes/MainGameScene.ts with 14 additions and 6 removals                      
+       246        }
+       247    
+       248        private createGroundArea() {
+       249 +          // 创建各个层级容器
+       250            this.groundContainer = this.add.container(0, 0);
+       251 +          this.buildingContainer = this.add.container(0, 0);
+       252 +          this.characterContainer = this.add.container(0, 0);
+       253            
+       254 +          // 设置容器深度，确保正确的层级关系
+       255 +          this.groundContainer.setDepth(0);    // 地面层最后面
+       256 +          this.buildingContainer.setDepth(50); // 建筑层中间
+       257 +          this.characterContainer.setDepth(100); // 角色层最前面
+       258 +          
+       259            // land只是地面参考线，不需要显示
+       260            // 地面位置在y=789
+       261            
+     ...
+       276                this.groundContainer.add(castle);
+       277            }
+       278            
+       279 -          // 创建建筑管理器
+       280 -          this.buildingManager = new BuildingManager(this, this.groundContainer);
+       279 +          // 创建建筑管理器（使用建筑容器）
+       280 +          this.buildingManager = new BuildingManager(this, this.buildingContainer);
+       281            
+       282 -          // 创建矮人管理器
+       283 -          this.dwarfManager = new DwarfManager(this, this.groundContainer);
+       282 +          // 创建矮人管理器（使用角色容器）
+       283 +          this.dwarfManager = new DwarfManager(this, this.characterContainer);
+       284            
+       285 -          // 创建怪物管理器
+       286 -          this.monsterManager = new MonsterManager(this, this.groundContainer);
+       285 +          // 创建怪物管理器（使用角色容器）
+       286 +          this.monsterManager = new MonsterManager(this, this.characterContainer);
+       287            
+       288            // 创建游戏状态管理器
+       289            this.gameStateManager = new GameStateManager(this);
+
+✻ Thinking…
+
+  现在我需要移除之前在 Dwarf 类中添加的 bringToTop 调用，因为现在使用了正确的容器分层，不再需要它了。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 5 removals                            
+       420    
+       421            // 更新精灵位置
+       422            this.sprite.setPosition(this.x, this.y);
+       423 -          
+       424 -          // 确保矮人始终在最前面
+       425 -          if (this.sprite.parentContainer) {
+       426 -              this.sprite.parentContainer.bringToTop(this.sprite);
+       427 -          }
+       423        }
+       424    
+       425        /**
+
+✻ Thinking…
+
+  现在我也需要移除之前在各个对象上设置的深度值，因为现在使用容器分层，对象内部的深度设置已经不需要了。
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 removals                
+        97                this.sprite.setOrigin(0.5, 1);
+        98                this.sprite.setStrokeStyle(2, 0x000000);
+        99            }
+       100 -          
+       101 -          // 设置矮人深度，确保在建筑物前面
+       102 -          this.sprite.setDepth(100);
+       100        }
+       101    
+       102        /**
+
+✻ Thinking…
+
+  现在我也需要移除建筑和地基上的深度设置，因为它们现在在专门的建筑容器中。
+
+⏺ Update(src/managers/BuildingManager.ts)
+  ⎿  Updated src/managers/BuildingManager.ts with 1 removal                                         
+       191            const foundation = this.scene.add.image(position.x, position.y, 'foundation');
+       192            foundation.setOrigin(0, 0); // 与建筑一致，左上角对齐
+       193            foundation.setDisplaySize(162, 162); // 与弓箭塔建筑一样的大小
+       194 -          foundation.setDepth(10); // 地基在后面
+       194            
+       195            this.container.add(foundation);
+       196            this.foundations.set(`${position.x}_${position.y}`, foundation);
+
+✻ Thinking…
+
+  继续移除建筑上的深度设置。
+
+⏺ Update(src/managers/BuildingManager.ts)
+  ⎿  Updated src/managers/BuildingManager.ts with 3 removals                             
+       417                this.sprite.setOrigin(0, 0);
+       418                this.sprite.setStrokeStyle(2, 0x000000);
+       419            }
+       420 -          
+       421 -          // 设置建筑深度，确保在矮人后面
+       422 -          this.sprite.setDepth(50);
+       420    
+       421            // Figma中没有建筑名称显示，创建隐藏文本以兼容现有代码
+       422            this.nameText = this.scene.add.text(0, 0, '', { fontSize: '1px' });
+
+✻ Thinking…
+
+  现在也需要移除建造动画上的深度设置。
+
+⏺ Update(src/entities/BuildingConstruction.ts)
+  ⎿  Updated src/entities/BuildingConstruction.ts with 3 removals                            
+       52                    this.sprite.setVisible(false);
+       53                    this.sprite.setDisplaySize(162, 162);
+       54                }
+       55 -              
+       56 -              // 设置建造动画深度，在地基和建筑之间
+       57 -              this.sprite.setDepth(30);
+       55            } catch (error) {
+       56                console.error('Error creating BuildingConstruction sprite:', error);
+       57                // 创建最简单的备用精灵
+
+✻ Thinking…
+
+  现在所有的修改都完成了。我创建了一个更清晰的层级系统：
+
+  1. groundContainer (depth=0) - 包含城堡等地面元素
+  2. buildingContainer (depth=50) - 包含所有建筑、地基和建造动画
+  3. characterContainer (depth=100) - 包含所有矮人和怪物
+
+  这样可以确保矮人始终在建筑前面，而不需要在每个对象上单独设置深度。
+
+⏺ 完美！我已经完成了两个问题的修复：
+
+  1. 移动动画问题 ✓
+
+  修改了 moveToTarget 方法，移除了对 BUILD 状态的特殊处理。现在无论矮人处于什么状态，只要在移动就会播放 walk 动画。
+
+  2. 层级问题 ✓
+
+  深入分析后发现问题根源：在Phaser的Container中，子对象的depth属性是相对于容器内部的，而不是全局的。容器内的渲染顺序主要由添加顺序决定。
+
+  解决方案：创建了分层的容器系统：
+  - groundContainer (depth=0) - 地面元素（城堡等）
+  - buildingContainer (depth=50) - 所有建筑相关（地基、建造动画、建筑）
+  - characterContainer (depth=100) - 所有角色（矮人、怪物）
+
+  这样通过容器的深度来控制层级，确保：
+  - 矮人和怪物始终在建筑前面
+  - 建筑在地面元素前面
+  - 不需要在每个对象上单独设置深度
+
+  现在游戏应该能正确显示：
+  1. 矮人移动时播放walk动画
+  2. 矮人始终显示在建筑物前面
+
+> 很好，这两个问题解决了。但现在有个新问题：矮人移动到建筑物前时，没有播放建造动画。矮人应该在移动到建筑物时播walk，然后建造时播building，然后建筑物造完了进其他状态
+
+⏺ 我来检查矮人建造动画的问题。
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 我看到代码在第816行调用了 this.playAnimation('build')，让我检查这个方法和建造动画的创建：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 20 lines (ctrl+r to expand)
+
+⏺ 让我检查建造动画是否被创建：
+
+⏺ Search(pattern: "dwarf_build", path: "src/entities/Dwarf.ts", output_mode: "content")
+  ⎿  Found 7 lines (ctrl+r to expand)
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ 看起来代码逻辑是正确的。让我添加一些调试日志来看看建造动画是否被正确触发：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 additions                                          
+       812            
+       813            // 到达建造位置，开始建造
+       814            if (buildingTask.status === 'waiting_for_dwarf') {
+       815 +              console.log(`[Dwarf ${this.id}] 到达建造位置，调用 startBuilding`);
+       816                buildingManager.startBuilding(this.targetBuildId);
+       817 +              
+       818 +              console.log(`[Dwarf ${this.id}] 切换到建造动画`);
+       819                this.playAnimation('build');
+       820                
+       821                // 创建建筑动画（这将在Building实体中处理）
+
+⏺ 让我检查矮人到达目标后是否停止了walk动画：
+
+⏺ Read(src/entities/Dwarf.ts)
+  ⎿  Read 15 lines (ctrl+r to expand)
+
+⏺ 好的，我看到当矮人到达目标位置时，会在第402行根据状态播放相应动画。但是可能在 executeBuild 中的判断条件导致动画被覆盖了。
+
+  让我检查一下建造动画的资源是否存在：
+
+⏺ Search(pattern: "dwarf_build", path: "src/systems/AssetManager.ts", output_mode: "content")
+  ⎿  Found 1 line (ctrl+r to expand)
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 4 additions and 1 removal                                                                           
+       250                    this.playRandomIdleAnimation();
+       251                } else if (animationType === 'build') {
+       252                    const animKey = `dwarf_build_${this.id}`;
+       253 +                  console.log(`[Dwarf ${this.id}] 尝试播放建造动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
+       254                    if (this.scene.anims.exists(animKey)) {
+       255                        this.sprite.play(animKey);
+       256 -                      console.log(`Dwarf ${this.id} playing build animation`);
+       256 +                      console.log(`[Dwarf ${this.id}] 成功播放建造动画`);
+       257 +                  } else {
+       258 +                      console.warn(`[Dwarf ${this.id}] 建造动画不存在: ${animKey}`);
+       259                    }
+       260                }
+       261            }
+
+⏺ 让我检查动画创建时的日志：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 5 additions                                                   
+       205            
+       206            // 创建建造动画
+       207            if (!animsManager.exists(`dwarf_build_${this.id}`)) {
+       208 +              console.log(`[Dwarf ${this.id}] 创建建造动画...`);
+       209                if (this.scene.textures.exists('dwarf_build_1')) {
+       210                    // 如果有专门的建造动画，使用它
+       211                    const buildFrames = [];
+     ...
+       215                        }
+       216                    }
+       217                    
+       218 +                  console.log(`[Dwarf ${this.id}] 找到 ${buildFrames.length} 帧建造动画`);
+       219 +                  
+       220                    if (buildFrames.length > 0) {
+       221                        animsManager.create({
+       222                            key: `dwarf_build_${this.id}`,
+     ...
+       222                            frameRate: 20, // 20帧/秒，统一帧率
+       223                            repeat: -1
+       224                        });
+       225 +                      console.log(`[Dwarf ${this.id}] 建造动画创建成功`);
+       226                    }
+       227                } else {
+       228 +                  console.log(`[Dwarf ${this.id}] 没有找到建造动画帧，使用备用动画`);
+       229                    // 回退到第一套待机动画
+       230                    animsManager.create({
+       231                        key: `dwarf_build_${this.id}`,
+
+⏺ 让我再添加一些调试信息，看看建造过程中动画是否被其他逻辑中断：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 11 additions and 7 removals                                                                         
+       838            
+       839            // 建造过程中保持建造动画
+       840            if (buildingTask.status === 'building') {
+       841 -              // 建造持续时间（可以根据建筑类型调整）
+       842 -              const buildDuration = 5000; // 5秒
+       843 -              
+       844 -              // 这里可以添加建造进度逻辑
+       845 -              // 简单起见，我们等待建筑动画完成后触发完成事件
+       846 -              
+       847 -              // 注意：实际的建造完成会由建筑动画系统触发
+       841 +              // 确保持续播放建造动画
+       842 +              if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+       843 +                  const currentAnim = this.sprite.anims.currentAnim;
+       844 +                  const isPlaying = this.sprite.anims.isPlaying;
+       845 +                  
+       846 +                  // 如果动画停止了或者不是建造动画，重新播放
+       847 +                  if (!isPlaying || !currentAnim || !currentAnim.key.includes('build')) {
+       848 +                      console.log(`[Dwarf ${this.id}] 重新播放建造动画，当前动画: ${currentAnim?.key}, 是否播放: ${isPlaying}`);
+       849 +                      this.playAnimation('build');
+       850 +                  }
+       851 +              }
+       852            }
+       853        }
+       854        
+
+⏺ 我已经添加了详细的调试日志。现在请运行游戏并购买一个建筑，观察控制台输出，特别注意：
+
+  1. 动画创建阶段：
+    - "创建建造动画..."
+    - "找到 X 帧建造动画" 或 "没有找到建造动画帧"
+  2. 到达建造位置时：
+    - "到达建造位置，调用 startBuilding"
+    - "切换到建造动画"
+    - "尝试播放建造动画"
+    - "成功播放建造动画" 或 "建造动画不存在"
+  3. 建造过程中：
+    - 是否有 "重新播放建造动画" 的日志
+
+  这些日志会帮助我们确定是：
+  - 动画资源没有正确加载
+  - 动画没有正确创建
+  - 动画被其他逻辑中断
+  - 还是其他问题
+
+  请告诉我你看到的日志输出。
+
+> 先不说日志，现在的表现是走到建筑物那会播放idle动画，你结合这个信息再分析分析
+
+⏺ 基于这个关键信息——矮人走到建筑物后播放的是idle动画而不是build动画，我来分析问题。
+
+  问题出在 updateMovement 方法中。当矮人到达目标位置时（第401-405行），会根据状态播放动画：
+
+  if (this.state === DwarfState.BUILD) {
+      this.playAnimation('build');
+  } else {
+      this.playAnimation('idle');
+  }
+
+  但是，这个判断可能在矮人还没有真正开始建造任务时就执行了。让我检查时序问题：
+
+⏺ Update(src/entities/Dwarf.ts)
+  ⎿  Updated src/entities/Dwarf.ts with 3 additions and 1 removal                                             
+       406                this.isMoving = false;
+       407                
+       408                // 停止移动时播放对应状态的动画
+       409 +              // 但是在BUILD状态下，让executeBuild来决定何时播放建造动画
+       410                if (this.state === DwarfState.BUILD) {
+       411 -                  this.playAnimation('build');
+       411 +                  // BUILD状态下不在这里播放动画，等待executeBuild处理
+       412 +                  console.log(`[Dwarf ${this.id}] 到达目标，BUILD状态，等待executeBuild处理动画`);
+       413                } else {
+       414                    this.playAnimation('idle');
+       415                }
+
+⏺ 现在问题应该解决了。之前的问题是：
+
+  1. 矮人在BUILD状态下移动到目标位置
+  2. updateMovement检测到到达目标，由于状态是BUILD，所以调用playAnimation('build')
+  3. 但此时executeBuild还没有真正开始建造（buildingTask.status还是'waiting_for_dwarf'）
+  4. 下一帧executeBuild执行，发现还需要调用startBuilding
+  5. 在startBuilding之前，动画可能被其他逻辑（比如idle动画系统）覆盖了
+
+  现在的修改让BUILD状态下的动画控制完全由executeBuild方法负责，避免了时序冲突。
+
+  运行游戏应该能看到：
+  1. 矮人walk到建筑位置
+  2. 到达后不会立即播放动画（避免过早播放build动画）
+  3. executeBuild检测到位置正确后，调用startBuilding并播放build动画
+  4. 建造过程中持续播放build动画
+

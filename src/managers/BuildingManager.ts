@@ -366,7 +366,7 @@ class Building {
     public y: number;
     
     private scene: Phaser.Scene;
-    private sprite: Phaser.GameObjects.Rectangle;
+    private sprite: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
     private healthBar: Phaser.GameObjects.Rectangle | null = null;
     private nameText: Phaser.GameObjects.Text;
     
@@ -381,6 +381,13 @@ class Building {
     private attackSpeed: number = 1000; // 攻击间隔（毫秒）
     private lastAttackTime: number = 0;
     private currentTarget: any = null;
+    
+    // Idle动画系统
+    private isPlayingIdleAnimation: boolean = false;
+    private idleAnimationTimer: number = 0;
+    private idleStaticDuration: number = 0; // 静止状态的持续时间
+    private readonly IDLE_ANIMATION_CHANCE = 0.5; // 50%的概率播放idle动画
+    private idleAnimationDecided: boolean = false; // 是否已经决定了当前的idle行为
 
     constructor(scene: Phaser.Scene, id: string, buildingType: string, productId: string, x: number, y: number) {
         this.scene = scene;
@@ -403,10 +410,13 @@ class Building {
         
         // 使用实际的弓箭塔图像 (Figma: archer_building 162×162px)
         if (this.buildingType === 'arrow_tower') {
-            const archerImage = this.scene.add.image(this.x, this.y, 'archer_building');
-            archerImage.setOrigin(0, 0);
-            archerImage.setDisplaySize(buildingSize, buildingSize);
-            this.sprite = archerImage as any; // 类型转换以兼容现有代码
+            // 使用Sprite以支持动画
+            this.sprite = this.scene.add.sprite(this.x, this.y, 'archer_building');
+            this.sprite.setOrigin(0, 0);
+            this.sprite.setDisplaySize(buildingSize, buildingSize);
+            
+            // 创建idle动画
+            this.createIdleAnimation();
         } else {
             // 其他建筑类型使用矩形
             this.sprite = this.scene.add.rectangle(
@@ -436,6 +446,146 @@ class Building {
             this.maxHealth = 100;
         } catch (error) {
             console.warn('Failed to load building config');
+        }
+    }
+
+    /**
+     * 创建idle动画
+     */
+    private createIdleAnimation(): void {
+        const animsManager = this.scene.anims;
+        const animKey = `${this.buildingType}_idle`;
+        
+        if (!animsManager.exists(animKey) && this.buildingType === 'arrow_tower') {
+            // 创建弓箭塔idle动画
+            const idleFrames = [];
+            for (let i = 1; i <= 101; i++) {
+                if (this.scene.textures.exists(`arrow_tower_idle_${i}`)) {
+                    idleFrames.push({ key: `arrow_tower_idle_${i}` });
+                }
+            }
+            
+            if (idleFrames.length > 0) {
+                animsManager.create({
+                    key: animKey,
+                    frames: idleFrames,
+                    frameRate: 20, // 20fps统一帧率
+                    repeat: 0 // 播放一次
+                });
+                
+                console.log(`Created building idle animation: ${animKey} with ${idleFrames.length} frames`);
+            }
+        }
+    }
+    
+    /**
+     * 播放动画（统一处理Sprite类型检查）
+     */
+    private playAnimation(animKey: string): void {
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.play(animKey);
+            
+            // 弓箭塔idle动画需要特殊处理，因为动画帧尺寸不同
+            if (animKey === 'arrow_tower_idle') {
+                // 动画帧是720x720，静态图是538x538
+                // 使用setDisplaySize而不是setScale，这样更一致
+                this.sprite.setDisplaySize(162, 162);
+                
+                // 如果动画内容在帧中的位置不同，可能需要调整原点或位置
+                // 暂时保持原点(0,0)不变，观察效果
+            }
+        }
+    }
+    
+    /**
+     * 停止动画
+     */
+    private stopAnimation(): void {
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.stop();
+            // 恢复到默认纹理
+            this.sprite.setTexture('archer_building');
+            // setDisplaySize应该保持不变，不需要重新设置
+        }
+    }
+    
+    /**
+     * 更新idle动画逻辑
+     */
+    private updateIdleAnimation(delta: number): void {
+        // 只有在没有攻击目标时才检查idle动画
+        if (this.currentTarget || this.isDestroyed) return;
+        
+        // 如果还没有决定idle行为，立即决定
+        if (!this.idleAnimationDecided) {
+            this.decideIdleAnimation();
+            return;
+        }
+        
+        // 如果正在播放动画，等待动画完成（动画完成会在事件中处理）
+        if (this.isPlayingIdleAnimation) {
+            return;
+        }
+        
+        // 如果在静止状态，计时
+        this.idleAnimationTimer += delta;
+        if (this.idleAnimationTimer >= this.idleStaticDuration) {
+            // 静止时间结束，重新决定
+            this.idleAnimationDecided = false;
+            this.idleAnimationTimer = 0;
+        }
+    }
+    
+    /**
+     * 决定idle动画行为
+     */
+    private decideIdleAnimation(): void {
+        this.idleAnimationDecided = true;
+        
+        // 随机决定是播放动画还是静止
+        if (Math.random() < this.IDLE_ANIMATION_CHANCE) {
+            // 播放动画
+            this.startIdleAnimation();
+        } else {
+            // 静止2-4秒
+            this.idleStaticDuration = 2000 + Math.random() * 2000; // 2-4秒
+            this.idleAnimationTimer = 0;
+            this.isPlayingIdleAnimation = false;
+            console.log(`Building ${this.id} will stay static for ${(this.idleStaticDuration/1000).toFixed(1)}s`);
+        }
+    }
+    
+    /**
+     * 开始播放idle动画
+     */
+    private startIdleAnimation(): void {
+        if (this.buildingType === 'arrow_tower' && !this.isPlayingIdleAnimation) {
+            const animKey = `${this.buildingType}_idle`;
+            if (this.scene.anims.exists(animKey) && this.sprite instanceof Phaser.GameObjects.Sprite) {
+                this.playAnimation(animKey);
+                this.isPlayingIdleAnimation = true;
+                
+                // 监听动画完成事件
+                this.sprite.once('animationcomplete', (animation: any) => {
+                    console.log(`Building ${this.id} idle animation completed: ${animation.key}`);
+                    this.isPlayingIdleAnimation = false;
+                    this.idleAnimationDecided = false; // 重新决定下一个行为
+                });
+                
+                console.log(`Building ${this.id} started idle animation`);
+            }
+        }
+    }
+    
+    /**
+     * 停止播放idle动画
+     */
+    private stopIdleAnimation(): void {
+        if (this.isPlayingIdleAnimation && this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.off('animationcomplete'); // 移除动画完成监听器
+            this.stopAnimation();
+            this.isPlayingIdleAnimation = false;
+            console.log(`Building ${this.id} stopped idle animation`);
         }
     }
 
@@ -498,6 +648,9 @@ class Building {
 
         // 更新攻击逻辑
         this.updateAttackLogic(monsters);
+        
+        // 更新idle动画
+        this.updateIdleAnimation(delta);
     }
 
     /**
@@ -511,6 +664,15 @@ class Building {
         // 寻找范围内的目标
         if (!this.currentTarget || !this.isTargetValid(this.currentTarget)) {
             this.currentTarget = this.findNearestTarget(monsters);
+            
+            // 找到新目标时停止idle动画并重置状态
+            if (this.currentTarget) {
+                if (this.isPlayingIdleAnimation) {
+                    this.stopIdleAnimation();
+                }
+                this.idleAnimationDecided = false;
+                this.idleAnimationTimer = 0;
+            }
         }
 
         // 执行攻击

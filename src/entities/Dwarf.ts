@@ -22,7 +22,15 @@ export class Dwarf {
     // 待机动画系统
     private currentIdleSet: number = 1; // 当前使用的待机动画套装 (1 或 2)
     private idleAnimationTimer: number = 0;
-    private readonly IDLE_ANIMATION_SWITCH_TIME = 3000; // 3秒切换一次待机动画
+    private idleStaticDuration: number = 0; // 静止状态的持续时间
+    private isPlayingIdleAnimation: boolean = false; // 是否正在播放idle动画
+    private idleAnimationDecided: boolean = false; // 是否已经决定了当前的idle行为
+    private readonly IDLE_ANIMATION_CHANCE = 0.33; // 33%的概率播放idle动画
+    private readonly IDLE_MOVE_CHANCE = 0.33; // 33%的概率移动
+    // 剩余33%的概率静止
+    
+    // 待机行为类型
+    private currentIdleBehavior: 'static' | 'move' | 'animation' | 'none' = 'none';
     
     // 新状态机系统
     private state: DwarfState = DwarfState.IDLE;
@@ -158,7 +166,7 @@ export class Dwarf {
                         key: `dwarf_idle1_${this.id}`,
                         frames: idle1Frames,
                         frameRate: 20, // 20帧/秒，统一帧率
-                        repeat: -1
+                        repeat: 0 // 播放一次
                     });
                 }
             } else {
@@ -189,7 +197,7 @@ export class Dwarf {
                         key: `dwarf_idle2_${this.id}`,
                         frames: idle2Frames,
                         frameRate: 20, // 20帧/秒，统一帧率
-                        repeat: -1
+                        repeat: 0 // 播放一次
                     });
                 }
             } else {
@@ -251,8 +259,16 @@ export class Dwarf {
                     this.sprite.play(animKey);
                 }
             } else if (animationType === 'idle') {
-                // 播放随机待机动画
-                this.playRandomIdleAnimation();
+                // 只有在IDLE状态下才通过decideIdleAnimation来处理
+                if (this.state === DwarfState.IDLE) {
+                    this.idleAnimationDecided = false;
+                } else {
+                    // 其他状态下停止动画并显示静态帧
+                    this.sprite.stop();
+                    if (this.scene.textures.exists('dwarf_walk_1')) {
+                        this.sprite.setTexture('dwarf_walk_1');
+                    }
+                }
             } else if (animationType === 'build') {
                 const animKey = `dwarf_build_${this.id}`;
                 console.log(`[Dwarf ${this.id}] 尝试播放建造动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
@@ -277,12 +293,31 @@ export class Dwarf {
             
             if (this.scene.anims.exists(animKey)) {
                 this.sprite.play(animKey);
-                console.log(`Dwarf ${this.id} playing idle animation set ${this.currentIdleSet}`);
+                this.isPlayingIdleAnimation = true;
+                
+                // 监听动画完成事件
+                this.sprite.once('animationcomplete', (animation: any) => {
+                    console.log(`[Dwarf ${this.id}] idle animation completed: ${animation.key}`);
+                    this.isPlayingIdleAnimation = false;
+                    this.idleAnimationDecided = false; // 重新决定下一个行为
+                    this.currentIdleBehavior = 'none';
+                });
+                
+                console.log(`[Dwarf ${this.id}] playing idle animation set ${this.currentIdleSet}`);
             } else {
                 // 回退到第一套
                 const fallbackKey = `dwarf_idle1_${this.id}`;
                 if (this.scene.anims.exists(fallbackKey)) {
                     this.sprite.play(fallbackKey);
+                    this.isPlayingIdleAnimation = true;
+                    
+                    // 监听动画完成事件
+                    this.sprite.once('animationcomplete', (animation: any) => {
+                        console.log(`[Dwarf ${this.id}] idle animation completed (fallback): ${animation.key}`);
+                        this.isPlayingIdleAnimation = false;
+                        this.idleAnimationDecided = false;
+                        this.currentIdleBehavior = 'none';
+                    });
                 }
             }
             
@@ -410,6 +445,14 @@ export class Dwarf {
             if (this.state === DwarfState.BUILD) {
                 // BUILD状态下不在这里播放动画，等待executeBuild处理
                 console.log(`[Dwarf ${this.id}] 到达目标，BUILD状态，等待executeBuild处理动画`);
+            } else if (this.state === DwarfState.IDLE) {
+                // IDLE状态下，如果是移动行为完成，不调用playAnimation，而是让updateIdleAnimation处理
+                if (this.currentIdleBehavior === 'move') {
+                    console.log(`[Dwarf ${this.id}] idle movement completed, will decide next behavior`);
+                    // 不需要额外操作，updateIdleAnimation会检测到移动完成并重新决定
+                } else {
+                    this.playAnimation('idle');
+                }
             } else {
                 this.playAnimation('idle');
             }
@@ -433,15 +476,104 @@ export class Dwarf {
      * 更新待机动画切换逻辑
      */
     private updateIdleAnimation(delta: number): void {
-        // 只在静止状态且是Sprite时更新
-        if (this.sprite instanceof Phaser.GameObjects.Sprite && !this.isMoving) {
-            this.idleAnimationTimer += delta;
-            
-            // 如果到了切换时间，随机切换待机动画
-            if (this.idleAnimationTimer >= this.IDLE_ANIMATION_SWITCH_TIME) {
-                this.playRandomIdleAnimation();
-            }
+        // 只在IDLE状态且是Sprite时更新
+        if (!(this.sprite instanceof Phaser.GameObjects.Sprite) || this.state !== DwarfState.IDLE) {
+            return;
         }
+        
+        // 如果还没有决定idle行为，立即决定
+        if (!this.idleAnimationDecided) {
+            this.decideIdleAnimation();
+            return;
+        }
+        
+        // 根据当前行为类型处理
+        switch (this.currentIdleBehavior) {
+            case 'animation':
+                // 如果正在播放动画，等待动画完成（动画完成会在事件中处理）
+                if (this.isPlayingIdleAnimation) {
+                    return;
+                }
+                break;
+                
+            case 'move':
+                // 如果正在移动，等待移动完成
+                if (this.isMoving) {
+                    return;
+                }
+                // 移动完成，重新决定
+                this.idleAnimationDecided = false;
+                this.currentIdleBehavior = 'none';
+                break;
+                
+            case 'static':
+                // 如果在静止状态，计时
+                this.idleAnimationTimer += delta;
+                if (this.idleAnimationTimer >= this.idleStaticDuration) {
+                    // 静止时间结束，重新决定
+                    this.idleAnimationDecided = false;
+                    this.idleAnimationTimer = 0;
+                    this.currentIdleBehavior = 'none';
+                }
+                break;
+        }
+    }
+    
+    /**
+     * 决定idle行为
+     */
+    private decideIdleAnimation(): void {
+        this.idleAnimationDecided = true;
+        
+        const random = Math.random();
+        
+        if (random < this.IDLE_ANIMATION_CHANCE) {
+            // 播放动画
+            this.currentIdleBehavior = 'animation';
+            this.playRandomIdleAnimation();
+        } else if (random < this.IDLE_ANIMATION_CHANCE + this.IDLE_MOVE_CHANCE) {
+            // 移动
+            this.currentIdleBehavior = 'move';
+            this.startIdleMovement();
+        } else {
+            // 静止2-4秒
+            this.currentIdleBehavior = 'static';
+            this.idleStaticDuration = 2000 + Math.random() * 2000; // 2-4秒
+            this.idleAnimationTimer = 0;
+            this.isPlayingIdleAnimation = false;
+            
+            // 确保显示静态帧
+            if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+                this.sprite.stop();
+                if (this.scene.textures.exists('dwarf_walk_1')) {
+                    this.sprite.setTexture('dwarf_walk_1');
+                }
+            }
+            
+            console.log(`[Dwarf ${this.id}] will stay static for ${(this.idleStaticDuration/1000).toFixed(1)}s`);
+        }
+    }
+    
+    /**
+     * 开始idle移动
+     */
+    private startIdleMovement(): void {
+        if (this.isMoving) return;
+        
+        const minX = this.x - 100; // 当前位置附近100像素
+        const maxX = this.x + 100;
+        let randomX = Math.max(100, Math.min(1100, minX + Math.random() * (maxX - minX)));
+        
+        // 确保目标位置与当前位置有足够的距离（至少50像素）
+        const minDistance = 50;
+        if (Math.abs(randomX - this.x) < minDistance) {
+            // 如果距离太近，选择一个更远的位置
+            randomX = this.x + (Math.random() < 0.5 ? -minDistance : minDistance);
+            randomX = Math.max(100, Math.min(1100, randomX));
+        }
+        
+        this.moveToTarget(randomX, this.GROUND_Y);
+        console.log(`[Dwarf ${this.id}] starting idle movement from x:${this.x.toFixed(0)} to x:${randomX.toFixed(0)}, distance: ${Math.abs(randomX - this.x).toFixed(0)}`);
     }
 
     /**
@@ -724,6 +856,12 @@ export class Dwarf {
         this.abortCurrentAction();
         this.state = DwarfState.IDLE;
         
+        // 重置idle动画状态
+        this.idleAnimationDecided = false;
+        this.idleAnimationTimer = 0;
+        this.isPlayingIdleAnimation = false;
+        this.currentIdleBehavior = 'none';
+        
         this.updateStatusDisplay();
         console.log(`[Dwarf ${this.id}] 进入待机状态`);
     }
@@ -747,6 +885,16 @@ export class Dwarf {
         
         // 停止移动
         this.isMoving = false;
+        
+        // 停止idle动画
+        if (this.isPlayingIdleAnimation && this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.stop();
+            this.sprite.off('animationcomplete'); // 移除动画完成监听器
+            this.isPlayingIdleAnimation = false;
+        }
+        
+        // 重置idle行为状态
+        this.currentIdleBehavior = 'none';
     }
 
     // =================== 状态执行函数 ===================
@@ -892,21 +1040,8 @@ export class Dwarf {
      * 执行待机状态
      */
     private executeIdle(delta: number): void {
-        // 随机移动
-        this.idleTimer += delta;
-        
-        if (this.idleTimer >= this.nextIdleMove && !this.isMoving) {
-            const minX = this.x - 100; // 当前位置附近100像素
-            const maxX = this.x + 100;
-            const randomX = Math.max(100, Math.min(1100, minX + Math.random() * (maxX - minX)));
-            
-            this.moveToTarget(randomX, this.GROUND_Y);
-            
-            this.idleTimer = 0;
-            this.nextIdleMove = 8000 + Math.random() * 10000; // 8-18秒随机，更长间隔
-            
-            console.log(`[Dwarf ${this.id}] 待机随机移动到 x:${randomX.toFixed(0)}`);
-        }
+        // 待机行为现在由updateIdleAnimation统一处理
+        // 这里不再需要额外的逻辑
     }
 
     // =================== 感知系统 ===================
