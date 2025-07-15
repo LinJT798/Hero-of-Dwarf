@@ -230,6 +230,11 @@ export class AssetManager {
             // 弓箭塔待机动画 (101帧，20fps)
             { key: 'arrow_tower_idle', type: 'frameSequence', path: '/assets/animations/arrow_tower/idle', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
+            // 哥布林动画 (101帧，20fps)
+            { key: 'goblin_walk', type: 'frameSequence', path: '/assets/animations/goblin/walk', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'goblin_attack', type: 'frameSequence', path: '/assets/animations/goblin/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'goblin_death', type: 'frameSequence', path: '/assets/animations/goblin/death', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            
             // 地面微风动画 (101帧，20fps)
             { key: 'land_wind', type: 'frameSequence', path: '/assets/animations/backgrounds/land/wind', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             

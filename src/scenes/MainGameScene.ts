@@ -7,6 +7,7 @@ import { Shop } from '../entities/Shop';
 import { BuildingManager } from '../managers/BuildingManager';
 import { DwarfManager } from '../managers/DwarfManager';
 import { MonsterManager } from '../managers/MonsterManager';
+import { NewMonsterManager } from '../managers/NewMonsterManager';
 import { GameStateManager } from '../systems/GameStateManager';
 import { LandAnimation } from '../entities/LandAnimation';
 
@@ -21,6 +22,7 @@ export class MainGameScene extends Scene {
     public buildingManager!: BuildingManager;
     private dwarfManager!: DwarfManager;
     private monsterManager!: MonsterManager;
+    private newMonsterManager!: NewMonsterManager;
     private gameStateManager!: GameStateManager;
     private landAnimation!: LandAnimation;
     
@@ -293,6 +295,9 @@ export class MainGameScene extends Scene {
         // 创建怪物管理器（使用角色容器）
         this.monsterManager = new MonsterManager(this, this.characterContainer);
         
+        // 创建新怪物管理器（哥布林系统）
+        this.newMonsterManager = new NewMonsterManager(this, this.characterContainer);
+        
         // 创建游戏状态管理器
         this.gameStateManager = new GameStateManager(this);
         
@@ -437,9 +442,9 @@ export class MainGameScene extends Scene {
         
         if (event.code === 'KeyM') {
             // 开始怪物波次
-            if (this.monsterManager) {
-                this.monsterManager.forceNextWave();
-                console.log('Wave Status:', this.monsterManager.getWaveStats());
+            if (this.newMonsterManager) {
+                this.newMonsterManager.forceNextWave();
+                console.log('Wave Status:', this.newMonsterManager.getWaveStats());
             }
         }
         
@@ -549,9 +554,19 @@ export class MainGameScene extends Scene {
             this.monsterManager.update(delta);
         }
         
+        // 更新新怪物管理器
+        if (this.newMonsterManager) {
+            // 更新目标列表
+            const buildings = this.buildingManager ? this.buildingManager.getBuildingsAsCombatUnits() : [];
+            const dwarfs = this.dwarfManager ? this.dwarfManager.getAllDwarfs() : [];
+            this.newMonsterManager.setTargets(buildings, dwarfs);
+            
+            this.newMonsterManager.update(delta);
+        }
+        
         // 更新建筑管理器（传递怪物列表用于攻击）
-        if (this.buildingManager && this.monsterManager) {
-            const monsters = this.monsterManager.getAliveMonsters();
+        if (this.buildingManager && this.newMonsterManager) {
+            const monsters = this.newMonsterManager.getAliveGoblins();
             this.buildingManager.update(delta, monsters);
         }
         

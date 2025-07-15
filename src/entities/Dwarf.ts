@@ -1,11 +1,12 @@
 import { resourceManager } from '../managers/ResourceManager';
 import { WorldTaskManager } from '../managers/WorldTaskManager';
+import { CombatUnit, CombatAttributes, CombatUtils } from '../interfaces/CombatUnit';
 
 /**
  * 矮人NPC实体 - 全新状态机架构
  * 实现5个状态：Combat > Deliver > Build > Gather > Idle
  */
-export class Dwarf {
+export class Dwarf implements CombatUnit {
     public id: string;
     private scene: Phaser.Scene;
     private sprite!: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
@@ -45,9 +46,17 @@ export class Dwarf {
     private sensedMonsters: any[] = [];
     private lastPerceptionUpdate: number = 0;
     
+    // 战斗属性
+    private combatAttributes: CombatAttributes = {
+        health: 80,
+        maxHealth: 80,
+        attack: 15,
+        range: 40,
+        attackSpeed: 1200, // 1.2秒攻击间隔
+        armor: 3
+    };
+    
     // 战斗相关
-    private attackDamage: number = 10;
-    private attackSpeed: number = 1.0; // 攻击/秒
     private attackTimer: number = 0;
     
     // 配置参数
@@ -1280,13 +1289,6 @@ export class Dwarf {
     }
     
     /**
-     * 获取矮人位置
-     */
-    public getPosition(): { x: number; y: number } {
-        return { x: this.x, y: this.y };
-    }
-    
-    /**
      * 获取当前任务 (兼容性保留)
      */
     public getCurrentTask(): DwarfTask | null {
@@ -1353,6 +1355,73 @@ export class Dwarf {
         this.sprite.destroy();
         
         console.log(`Dwarf ${this.id} destroyed`);
+    }
+    
+    // ===== CombatUnit接口实现 =====
+    
+    public getCombatAttributes(): CombatAttributes {
+        return { ...this.combatAttributes };
+    }
+    
+    public getPosition(): { x: number; y: number } {
+        return { x: this.x, y: this.y };
+    }
+    
+    public isAlive(): boolean {
+        return this.combatAttributes.health > 0 && this.sprite && !this.sprite.destroyed;
+    }
+    
+    public takeDamage(damage: number): void {
+        if (!this.isAlive()) return;
+        
+        this.combatAttributes.health = Math.max(0, this.combatAttributes.health - damage);
+        console.log(`Dwarf ${this.id} took ${damage} damage, health: ${this.combatAttributes.health}`);
+        
+        if (this.combatAttributes.health <= 0) {
+            this.die();
+        }
+    }
+    
+    public canAttack(target: CombatUnit): boolean {
+        return this.isAlive() && 
+               target.isAlive() && 
+               CombatUtils.isInRange(this, target);
+    }
+    
+    public attackTarget(target: CombatUnit): void {
+        if (!this.canAttack(target)) return;
+        
+        const damage = CombatUtils.calculateDamage(
+            this.combatAttributes.attack, 
+            target.getCombatAttributes().armor
+        );
+        
+        target.takeDamage(damage);
+        console.log(`Dwarf ${this.id} attacks target for ${damage} damage`);
+    }
+    
+    public getCollisionBounds(): { x: number; y: number; width: number; height: number } {
+        return {
+            x: this.x - this.DWARF_SIZE / 2,
+            y: this.y - this.DWARF_SIZE,
+            width: this.DWARF_SIZE,
+            height: this.DWARF_SIZE
+        };
+    }
+    
+    /**
+     * 矮人死亡处理
+     */
+    private die(): void {
+        console.log(`Dwarf ${this.id} died`);
+        // 触发死亡事件
+        this.scene.events.emit('dwarf-killed', {
+            dwarf: this,
+            position: this.getPosition()
+        });
+        
+        // 可以在这里添加死亡动画或特效
+        this.destroy();
     }
 }
 

@@ -1,4 +1,5 @@
 import { BuildingConstruction } from '../entities/BuildingConstruction';
+import { CombatUnit, CombatAttributes, CombatUtils } from '../interfaces/CombatUnit';
 
 /**
  * 建筑管理器
@@ -323,10 +324,17 @@ export class BuildingManager {
     /**
      * 更新所有建筑
      */
-    public update(delta: number, monsters: any[] = []): void {
+    public update(delta: number, monsters: CombatUnit[] = []): void {
         this.buildings.forEach(building => {
             building.update(delta, monsters);
         });
+    }
+    
+    /**
+     * 获取所有建筑作为战斗单位
+     */
+    public getBuildingsAsCombatUnits(): CombatUnit[] {
+        return Array.from(this.buildings.values()).filter(building => building.isAlive());
     }
 
     /**
@@ -358,7 +366,7 @@ interface BuildingPosition {
 /**
  * 建筑类
  */
-class Building {
+class Building implements CombatUnit {
     public id: string;
     public buildingType: string;
     public productId: string;
@@ -371,16 +379,21 @@ class Building {
     private nameText: Phaser.GameObjects.Text;
     
     // 建筑属性
-    private health: number = 100;
-    private maxHealth: number = 100;
     private isDestroyed: boolean = false;
     
-    // 攻击属性
-    private attackDamage: number = 20;
-    private attackRange: number = 150;
-    private attackSpeed: number = 1000; // 攻击间隔（毫秒）
+    // 战斗属性
+    private combatAttributes: CombatAttributes = {
+        health: 200,
+        maxHealth: 200,
+        attack: 25,
+        range: 150,
+        attackSpeed: 1000, // 1秒攻击间隔
+        armor: 10
+    };
+    
+    // 攻击系统
     private lastAttackTime: number = 0;
-    private currentTarget: any = null;
+    private currentTarget: CombatUnit | null = null;
     
     // Idle动画系统
     private isPlayingIdleAnimation: boolean = false;
@@ -442,8 +455,7 @@ class Building {
         try {
             // 这里可以加载建筑的具体配置
             // 暂时使用默认值
-            this.health = 100;
-            this.maxHealth = 100;
+            // 战斗属性已在combatAttributes中设置
         } catch (error) {
             console.warn('Failed to load building config');
         }
@@ -609,7 +621,7 @@ class Building {
             this.healthBar.destroy();
         }
 
-        const healthRatio = this.health / this.maxHealth;
+        const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
         const barWidth = 50;
         const barHeight = 4;
         
@@ -632,10 +644,10 @@ class Building {
     public takeDamage(damage: number): void {
         if (this.isDestroyed) return;
 
-        this.health = Math.max(0, this.health - damage);
+        this.combatAttributes.health = Math.max(0, this.combatAttributes.health - damage);
         this.updateHealthBar();
 
-        if (this.health <= 0) {
+        if (this.combatAttributes.health <= 0) {
             this.destroy();
         }
     }
@@ -643,7 +655,7 @@ class Building {
     /**
      * 更新建筑
      */
-    public update(delta: number, monsters: any[] = []): void {
+    public update(delta: number, monsters: CombatUnit[] = []): void {
         if (this.isDestroyed) return;
 
         // 更新攻击逻辑
@@ -656,7 +668,7 @@ class Building {
     /**
      * 更新攻击逻辑
      */
-    private updateAttackLogic(monsters: any[]): void {
+    private updateAttackLogic(monsters: CombatUnit[]): void {
         if (this.buildingType !== 'arrow_tower') return; // 只有弓箭塔可以攻击
 
         const currentTime = Date.now();
@@ -676,7 +688,7 @@ class Building {
         }
 
         // 执行攻击
-        if (this.currentTarget && this.canAttack(currentTime)) {
+        if (this.currentTarget && this.canAttackNow(currentTime)) {
             this.attackTarget(this.currentTarget);
             this.lastAttackTime = currentTime;
         }
@@ -685,15 +697,15 @@ class Building {
     /**
      * 寻找最近的目标
      */
-    private findNearestTarget(monsters: any[]): any {
-        let nearestTarget = null;
+    private findNearestTarget(monsters: CombatUnit[]): CombatUnit | null {
+        let nearestTarget: CombatUnit | null = null;
         let minDistance = Infinity;
 
         monsters.forEach(monster => {
             if (!monster.isAlive()) return;
 
-            const distance = this.getDistanceToTarget(monster);
-            if (distance <= this.attackRange && distance < minDistance) {
+            const distance = CombatUtils.getDistance(this.getPosition(), monster.getPosition());
+            if (distance <= this.combatAttributes.range && distance < minDistance) {
                 minDistance = distance;
                 nearestTarget = monster;
             }
@@ -705,49 +717,44 @@ class Building {
     /**
      * 检查目标是否有效
      */
-    private isTargetValid(target: any): boolean {
+    private isTargetValid(target: CombatUnit): boolean {
         if (!target || !target.isAlive()) return false;
         
-        const distance = this.getDistanceToTarget(target);
-        return distance <= this.attackRange;
-    }
-
-    /**
-     * 计算到目标的距离
-     */
-    private getDistanceToTarget(target: any): number {
-        const targetPos = target.getPosition();
-        const dx = targetPos.x - this.x;
-        const dy = targetPos.y - this.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        const distance = CombatUtils.getDistance(this.getPosition(), target.getPosition());
+        return distance <= this.combatAttributes.range;
     }
 
     /**
      * 检查是否可以攻击
      */
-    private canAttack(currentTime: number): boolean {
-        return currentTime - this.lastAttackTime >= this.attackSpeed;
+    private canAttackNow(currentTime: number): boolean {
+        return currentTime - this.lastAttackTime >= this.combatAttributes.attackSpeed;
     }
 
     /**
      * 攻击目标
      */
-    private attackTarget(target: any): void {
-        if (!target || !target.isAlive()) return;
+    public attackTarget(target: CombatUnit): void {
+        if (!this.canAttack(target)) return;
 
-        console.log(`Building ${this.id} attacks monster ${target.id} for ${this.attackDamage} damage`);
+        const damage = CombatUtils.calculateDamage(
+            this.combatAttributes.attack,
+            target.getCombatAttributes().armor
+        );
+
+        console.log(`Building ${this.id} attacks target for ${damage} damage`);
         
         // 创建攻击特效
         this.createAttackEffect(target);
         
         // 对目标造成伤害
-        target.takeDamage(this.attackDamage);
+        target.takeDamage(damage);
     }
 
     /**
      * 创建攻击特效
      */
-    private createAttackEffect(target: any): void {
+    private createAttackEffect(target: CombatUnit): void {
         const targetPos = target.getPosition();
         
         // 创建箭矢特效
@@ -789,17 +796,40 @@ class Building {
     }
 
     /**
-     * 获取位置
-     */
-    public getPosition(): { x: number; y: number } {
-        return { x: this.x, y: this.y };
-    }
-
-    /**
      * 检查是否被摧毁
      */
     public getIsDestroyed(): boolean {
         return this.isDestroyed;
+    }
+
+    // ===== CombatUnit接口实现 =====
+    
+    public getCombatAttributes(): CombatAttributes {
+        return { ...this.combatAttributes };
+    }
+    
+    public getPosition(): { x: number; y: number } {
+        return { x: this.x, y: this.y };
+    }
+    
+    public isAlive(): boolean {
+        return !this.isDestroyed && this.combatAttributes.health > 0;
+    }
+    
+    public canAttack(target: CombatUnit): boolean {
+        return this.isAlive() && 
+               target.isAlive() && 
+               CombatUtils.isInRange(this, target);
+    }
+    
+    public getCollisionBounds(): { x: number; y: number; width: number; height: number } {
+        const size = this.buildingType === 'arrow_tower' ? 162 : 60;
+        return {
+            x: this.x,
+            y: this.y,
+            width: size,
+            height: size
+        };
     }
 
     /**
