@@ -10,6 +10,8 @@ export class Dwarf implements CombatUnit {
     public id: string;
     private scene: Phaser.Scene;
     private sprite!: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
+    private healthBar: Phaser.GameObjects.Rectangle | null = null;
+    private healthBarBg: Phaser.GameObjects.Rectangle | null = null;
     
     // 位置和移动
     private x: number;
@@ -46,14 +48,14 @@ export class Dwarf implements CombatUnit {
     private sensedMonsters: any[] = [];
     private lastPerceptionUpdate: number = 0;
     
-    // 战斗属性
+    // 战斗属性（与哥布林数值一致）
     private combatAttributes: CombatAttributes = {
-        health: 80,
-        maxHealth: 80,
-        attack: 15,
-        range: 40,
-        attackSpeed: 1200, // 1.2秒攻击间隔
-        armor: 3
+        health: 100,
+        maxHealth: 100,
+        attack: 20,
+        range: 50,
+        attackSpeed: 1500, // 1.5秒攻击间隔
+        armor: 5
     };
     
     // 战斗相关
@@ -80,6 +82,7 @@ export class Dwarf implements CombatUnit {
         this.y = this.GROUND_Y; // 始终保持在地面上
         
         this.createSprite();
+        this.createHealthBar();
         this.setupEventListeners();
         
         console.log(`Dwarf ${this.id} created at (${x}, ${y}) with new state machine`);
@@ -93,6 +96,10 @@ export class Dwarf implements CombatUnit {
         if (this.scene.textures.exists('dwarf_walk_1')) {
             this.sprite = this.scene.add.sprite(this.x, this.y, 'dwarf_walk_1');
             this.sprite.setOrigin(0.5, 1); // 底部中心对齐，确保矮人站在地面上
+            
+            // 保存对sprite的引用，确保不会被修改
+            this.sprite.setData('isDwarfSprite', true);
+            this.sprite.setData('dwarfId', this.id);
             
             // 自动缩放到合适尺寸（保持宽高比）
             this.scaleSprite();
@@ -114,6 +121,44 @@ export class Dwarf implements CombatUnit {
             this.sprite.setOrigin(0.5, 1);
             this.sprite.setStrokeStyle(2, 0x000000);
         }
+    }
+    
+    /**
+     * 检查并修复精灵状态
+     */
+    private validateAndFixSprite(): boolean {
+        if (!this.sprite) {
+            console.error(`[Dwarf ${this.id}] 精灵不存在，尝试重新创建`);
+            this.createSprite();
+            return !!this.sprite;
+        }
+        
+        if ((this.sprite as any).destroyed) {
+            console.error(`[Dwarf ${this.id}] 精灵已被销毁，尝试重新创建`);
+            this.createSprite();
+            return !!this.sprite;
+        }
+        
+        // 检查是否是正确的Sprite类型
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            const sprite = this.sprite as Phaser.GameObjects.Sprite;
+            
+            // 检查play方法是否存在
+            if (typeof sprite.play !== 'function') {
+                console.error(`[Dwarf ${this.id}] Sprite的play方法丢失，尝试重新创建`);
+                const x = this.sprite.x;
+                const y = this.sprite.y;
+                this.sprite.destroy();
+                this.x = x;
+                this.y = y;
+                this.createSprite();
+                return !!this.sprite;
+            }
+            
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -255,17 +300,115 @@ export class Dwarf implements CombatUnit {
                 });
             }
         }
+        
+        // 创建攻击动画
+        if (!animsManager.exists(`dwarf_attack_${this.id}`)) {
+            console.log(`[Dwarf ${this.id}] 创建攻击动画...`);
+            if (this.scene.textures.exists('dwarf_attack_1')) {
+                const attackFrames = [];
+                for (let i = 1; i <= 101; i++) {
+                    if (this.scene.textures.exists(`dwarf_attack_${i}`)) {
+                        attackFrames.push({ key: `dwarf_attack_${i}` });
+                    }
+                }
+                
+                if (attackFrames.length > 0) {
+                    animsManager.create({
+                        key: `dwarf_attack_${this.id}`,
+                        frames: attackFrames,
+                        frameRate: 20, // 20帧/秒，统一帧率
+                        repeat: 0 // 播放一次
+                    });
+                    console.log(`[Dwarf ${this.id}] 攻击动画创建成功，共 ${attackFrames.length} 帧`);
+                }
+            } else {
+                console.log(`[Dwarf ${this.id}] 没有找到攻击动画帧，使用备用动画`);
+                // 回退到行走动画的第一帧
+                animsManager.create({
+                    key: `dwarf_attack_${this.id}`,
+                    frames: [{ key: 'dwarf_walk_1' }],
+                    frameRate: 1,
+                    repeat: -1
+                });
+            }
+        }
+    }
+
+    /**
+     * 获取血条对象（供管理器添加到容器）
+     */
+    public getHealthBarObjects(): Phaser.GameObjects.GameObject[] {
+        const objects: Phaser.GameObjects.GameObject[] = [];
+        if (this.healthBarBg) objects.push(this.healthBarBg);
+        if (this.healthBar) objects.push(this.healthBar);
+        return objects;
+    }
+    
+    /**
+     * 创建血条
+     */
+    private createHealthBar(): void {
+        const barWidth = 60;
+        const barHeight = 4;
+        const barY = this.y - 85; // 精灵上方
+        
+        // 背景
+        this.healthBarBg = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x000000);
+        this.healthBarBg.setOrigin(0.5, 0.5);
+        
+        // 血条
+        this.healthBar = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x00FF00);
+        this.healthBar.setOrigin(0.5, 0.5);
+    }
+    
+    /**
+     * 更新血条
+     */
+    private updateHealthBar(): void {
+        if (!this.healthBar || !this.healthBarBg) return;
+        
+        const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
+        const barWidth = 60;
+        
+        // 更新血条宽度
+        this.healthBar.setDisplaySize(barWidth * healthRatio, 4);
+        
+        // 更新血条颜色
+        let color = 0x00FF00; // 绿色
+        if (healthRatio < 0.5) {
+            color = 0xFFFF00; // 黄色
+        }
+        if (healthRatio < 0.25) {
+            color = 0xFF0000; // 红色
+        }
+        
+        this.healthBar.setFillStyle(color);
+        
+        // 更新血条位置
+        this.healthBar.setPosition(this.x, this.y - 85);
+        this.healthBarBg.setPosition(this.x, this.y - 85);
     }
 
     /**
      * 播放动画
      */
-    private playAnimation(animationType: 'walk' | 'idle' | 'build'): void {
-        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+    private playAnimation(animationType: 'walk' | 'idle' | 'build' | 'attack'): void {
+        // 调试信息
+        console.log(`[Dwarf ${this.id}] playAnimation called with type: ${animationType}`);
+        
+        // 验证并修复精灵状态
+        if (!this.validateAndFixSprite()) {
+            console.error(`[Dwarf ${this.id}] 无法播放动画 ${animationType}: 精灵验证失败`);
+            return;
+        }
+        
+        const sprite = this.sprite as Phaser.GameObjects.Sprite;
+        
+        try {
             if (animationType === 'walk') {
                 const animKey = `dwarf_walk_${this.id}`;
                 if (this.scene.anims.exists(animKey)) {
-                    this.sprite.play(animKey);
+                    sprite.play(animKey);
                 }
             } else if (animationType === 'idle') {
                 // 只有在IDLE状态下才通过decideIdleAnimation来处理
@@ -273,21 +416,41 @@ export class Dwarf implements CombatUnit {
                     this.idleAnimationDecided = false;
                 } else {
                     // 其他状态下停止动画并显示静态帧
-                    this.sprite.stop();
+                    sprite.stop();
                     if (this.scene.textures.exists('dwarf_walk_1')) {
-                        this.sprite.setTexture('dwarf_walk_1');
+                        sprite.setTexture('dwarf_walk_1');
                     }
                 }
             } else if (animationType === 'build') {
                 const animKey = `dwarf_build_${this.id}`;
                 console.log(`[Dwarf ${this.id}] 尝试播放建造动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
                 if (this.scene.anims.exists(animKey)) {
-                    this.sprite.play(animKey);
+                    sprite.play(animKey);
                     console.log(`[Dwarf ${this.id}] 成功播放建造动画`);
                 } else {
                     console.warn(`[Dwarf ${this.id}] 建造动画不存在: ${animKey}`);
                 }
+            } else if (animationType === 'attack') {
+                const animKey = `dwarf_attack_${this.id}`;
+                console.log(`[Dwarf ${this.id}] 尝试播放攻击动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
+                if (this.scene.anims.exists(animKey)) {
+                    sprite.play(animKey);
+                    console.log(`[Dwarf ${this.id}] 成功播放攻击动画`);
+                } else {
+                    console.warn(`[Dwarf ${this.id}] 攻击动画不存在: ${animKey}`);
+                }
             }
+        } catch (error) {
+            console.error(`[Dwarf ${this.id}] 播放动画时出错:`, error);
+            console.error(`[Dwarf ${this.id}] sprite状态:`, {
+                exists: !!this.sprite,
+                type: this.sprite ? this.sprite.constructor.name : 'undefined',
+                destroyed: this.sprite ? (this.sprite as any).destroyed : 'unknown'
+            });
+            
+            // 尝试重新创建精灵
+            console.error(`[Dwarf ${this.id}] 尝试重新创建精灵...`);
+            this.createSprite();
         }
     }
 
@@ -431,6 +594,12 @@ export class Dwarf implements CombatUnit {
             // 5. 更新待机动画切换
             this.updateIdleAnimation(delta);
         }
+        
+        // 6. 更新血条
+        this.updateHealthBar();
+        
+        // 7. 处理攻击逻辑
+        this.updateCombat(delta);
     }
 
     /**
@@ -448,6 +617,11 @@ export class Dwarf implements CombatUnit {
             this.x = this.targetX;
             this.y = this.GROUND_Y; // 确保在地面上
             this.isMoving = false;
+            
+            // 更新精灵位置
+            if (this.sprite && !this.sprite.destroyed) {
+                this.sprite.setPosition(this.x, this.y);
+            }
             
             // 停止移动时播放对应状态的动画
             // 但是在BUILD状态下，让executeBuild来决定何时播放建造动画
@@ -478,7 +652,9 @@ export class Dwarf implements CombatUnit {
         }
 
         // 更新精灵位置
-        this.sprite.setPosition(this.x, this.y);
+        if (this.sprite && !this.sprite.destroyed) {
+            this.sprite.setPosition(this.x, this.y);
+        }
     }
 
     /**
@@ -560,6 +736,79 @@ export class Dwarf implements CombatUnit {
             }
             
             console.log(`[Dwarf ${this.id}] will stay static for ${(this.idleStaticDuration/1000).toFixed(1)}s`);
+        }
+    }
+    
+    /**
+     * 更新攻击逻辑
+     */
+    private updateCombat(delta: number): void {
+        // 只在COMBAT状态下进行攻击逻辑
+        if (this.state !== DwarfState.COMBAT) {
+            return;
+        }
+        
+        // 检查是否有攻击目标
+        if (!this.combatTarget || !this.combatTarget.isAlive()) {
+            // 目标已死亡，退出战斗状态
+            this.combatTarget = null;
+            this.evaluateTransitions(); // 重新评估状态
+            return;
+        }
+        
+        // 检查目标是否在攻击范围内
+        const targetPos = this.combatTarget.getPosition();
+        const distance = Math.sqrt(Math.pow(targetPos.x - this.x, 2) + Math.pow(targetPos.y - this.y, 2));
+        
+        if (distance > this.combatAttributes.range) {
+            // 目标超出攻击范围，移动到攻击范围内
+            const moveDirection = targetPos.x > this.x ? 1 : -1;
+            const targetX = targetPos.x - (moveDirection * (this.combatAttributes.range - 10));
+            this.moveToTarget(targetX, this.GROUND_Y);
+            return;
+        }
+        
+        // 在攻击范围内，停止移动
+        if (this.isMoving) {
+            this.isMoving = false;
+            this.targetX = this.x;
+            this.targetY = this.y;
+        }
+        
+        // 更新攻击计时器
+        this.attackTimer += delta;
+        
+        // 检查是否可以攻击
+        if (this.attackTimer >= this.combatAttributes.attackSpeed) {
+            this.performAttack();
+            this.attackTimer = 0;
+        }
+    }
+    
+    /**
+     * 执行攻击
+     */
+    private performAttack(): void {
+        if (!this.combatTarget || !this.combatTarget.isAlive()) {
+            return;
+        }
+        
+        // 播放攻击动画
+        this.playAnimation('attack');
+        
+        // 监听攻击动画完成事件
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.once('animationcomplete', (animation: any) => {
+                if (animation.key === `dwarf_attack_${this.id}`) {
+                    // 攻击动画完成后，对目标造成伤害
+                    if (this.combatTarget && this.combatTarget.isAlive()) {
+                        this.attackTarget(this.combatTarget);
+                    }
+                }
+            });
+        } else {
+            // 如果不是Sprite，直接攻击
+            this.attackTarget(this.combatTarget);
         }
     }
     
@@ -912,7 +1161,7 @@ export class Dwarf implements CombatUnit {
      * 执行战斗状态
      */
     private executeCombat(delta: number): void {
-        if (!this.combatTarget || this.combatTarget.isDead()) {
+        if (!this.combatTarget || !this.combatTarget.isAlive()) {
             // 目标死亡，结束战斗
             this.combatTarget = null;
             return;
@@ -1090,16 +1339,31 @@ export class Dwarf implements CombatUnit {
     private updateSensedMonsters(): void {
         this.sensedMonsters = [];
         
+        // 检测旧的怪物管理器
         const monsterManager = (this.scene as any).monsterManager;
-        if (!monsterManager) return;
+        if (monsterManager) {
+            const monsters = monsterManager.getAliveMonsters();
+            for (const monster of monsters) {
+                const monsterPos = monster.getPosition();
+                const distance = this.getDistanceToPoint(this.x, this.y, monsterPos.x, monsterPos.y);
+                
+                if (distance <= this.R_SENSE) {
+                    this.sensedMonsters.push(monster);
+                }
+            }
+        }
         
-        const monsters = monsterManager.getAliveMonsters();
-        for (const monster of monsters) {
-            const monsterPos = monster.getPosition();
-            const distance = this.getDistanceToPoint(this.x, this.y, monsterPos.x, monsterPos.y);
-            
-            if (distance <= this.R_SENSE) {
-                this.sensedMonsters.push(monster);
+        // 检测新的哥布林管理器
+        const newMonsterManager = (this.scene as any).newMonsterManager;
+        if (newMonsterManager) {
+            const goblins = newMonsterManager.getAliveGoblins();
+            for (const goblin of goblins) {
+                const goblinPos = goblin.getPosition();
+                const distance = this.getDistanceToPoint(this.x, this.y, goblinPos.x, goblinPos.y);
+                
+                if (distance <= this.R_SENSE) {
+                    this.sensedMonsters.push(goblin);
+                }
             }
         }
     }
@@ -1354,6 +1618,14 @@ export class Dwarf implements CombatUnit {
         
         this.sprite.destroy();
         
+        // 销毁血条
+        if (this.healthBar) {
+            this.healthBar.destroy();
+        }
+        if (this.healthBarBg) {
+            this.healthBarBg.destroy();
+        }
+        
         console.log(`Dwarf ${this.id} destroyed`);
     }
     
@@ -1368,7 +1640,7 @@ export class Dwarf implements CombatUnit {
     }
     
     public isAlive(): boolean {
-        return this.combatAttributes.health > 0 && this.sprite && !this.sprite.destroyed;
+        return this.combatAttributes.health > 0 && this.sprite && !(this.sprite as any).destroyed;
     }
     
     public takeDamage(damage: number): void {
@@ -1414,14 +1686,23 @@ export class Dwarf implements CombatUnit {
      */
     private die(): void {
         console.log(`Dwarf ${this.id} died`);
-        // 触发死亡事件
+        
+        // 设置死亡标记
+        this.combatAttributes.health = 0;
+        
+        // 停止所有动画
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.stop();
+        }
+        
+        // 触发死亡事件，让管理器处理清理
         this.scene.events.emit('dwarf-killed', {
+            dwarfId: this.id,
             dwarf: this,
             position: this.getPosition()
         });
         
-        // 可以在这里添加死亡动画或特效
-        this.destroy();
+        // 不在这里调用destroy，让管理器来处理
     }
 }
 

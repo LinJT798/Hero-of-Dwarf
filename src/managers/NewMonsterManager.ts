@@ -134,6 +134,13 @@ export class NewMonsterManager {
         
         // 添加到容器
         this.container.add(goblin.getSprite());
+        
+        // 添加血条到容器
+        const healthBarObjects = goblin.getHealthBarObjects();
+        healthBarObjects.forEach(obj => {
+            this.container.add(obj);
+        });
+        
         this.goblins.set(goblinId, goblin);
         this.goblinsSpawned++;
         

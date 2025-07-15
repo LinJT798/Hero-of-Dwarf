@@ -221,6 +221,9 @@ export class AssetManager {
             // 矮人建造动画 (73帧，20fps)
             { key: 'dwarf_build', type: 'frameSequence', path: '/assets/animations/dwarf/build', frameCount: 73, fileExtension: 'png', namePattern: 'processed_frame_' },
             
+            // 矮人攻击动画 (101帧，20fps)
+            { key: 'dwarf_attack', type: 'frameSequence', path: '/assets/animations/dwarf/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            
             // 建筑相关资源
             { key: 'foundation', type: 'image', path: '/assets/images/foundation.png' },
             

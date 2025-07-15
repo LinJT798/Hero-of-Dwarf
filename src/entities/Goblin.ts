@@ -151,6 +151,16 @@ export class Goblin implements CombatUnit {
     }
     
     /**
+     * 获取血条对象（供管理器添加到容器）
+     */
+    public getHealthBarObjects(): Phaser.GameObjects.GameObject[] {
+        const objects: Phaser.GameObjects.GameObject[] = [];
+        if (this.healthBarBg) objects.push(this.healthBarBg);
+        if (this.healthBar) objects.push(this.healthBar);
+        return objects;
+    }
+    
+    /**
      * 创建血条
      */
     private createHealthBar(): void {

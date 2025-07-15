@@ -45,6 +45,7 @@ export class DwarfManager {
     private setupEventListeners(): void {
         this.scene.events.on('resource-landed', this.handleResourceLanded, this);
         this.scene.events.on('building-purchased', this.handleBuildingRequest, this);
+        this.scene.events.on('dwarf-killed', this.handleDwarfKilled, this);
         
         // resource-drop事件已废弃，资源现在直接在ResourceDropSystem中注册
     }
@@ -71,6 +72,12 @@ export class DwarfManager {
             this.container.add(dwarfSprite);
         }
         
+        // 添加血条到容器
+        const healthBarObjects = dwarf.getHealthBarObjects();
+        healthBarObjects.forEach(obj => {
+            this.container.add(obj);
+        });
+        
         this.dwarfs.set(dwarfId, dwarf);
         
         console.log(`Spawned dwarf: ${dwarfId} at (${position.x}, ${position.y})`);
@@ -86,6 +93,33 @@ export class DwarfManager {
         
         // 资源已经在ResourceDropSystem中注册到WorldTaskManager，这里不需要重复注册
         // 只需要通知矮人们有新资源可以收集
+    }
+    
+    /**
+     * 处理矮人死亡事件
+     */
+    private handleDwarfKilled(data: { dwarfId: string; dwarf: any; position: { x: number; y: number } }): void {
+        console.log(`[DwarfManager] 处理矮人死亡: ${data.dwarfId}`);
+        
+        const dwarf = this.dwarfs.get(data.dwarfId);
+        if (dwarf) {
+            // 先从Map中移除
+            this.dwarfs.delete(data.dwarfId);
+            
+            // 然后销毁矮人
+            dwarf.destroy();
+            
+            console.log(`[DwarfManager] 矮人 ${data.dwarfId} 已从管理器中移除并销毁`);
+            
+            // 检查是否需要重新生成矮人
+            if (this.dwarfs.size < this.MAX_DWARFS) {
+                // 延迟生成新矮人，给玩家一些喘息时间
+                this.scene.time.delayedCall(5000, () => {
+                    const spawnPos = this.SPAWN_POSITIONS[this.dwarfs.size];
+                    this.spawnDwarf(spawnPos);
+                });
+            }
+        }
     }
     
     /**
@@ -243,9 +277,25 @@ export class DwarfManager {
         // 更新WorldTaskManager
         this.worldTaskMgr.update(delta);
         
-        // 更新所有矮人
-        this.dwarfs.forEach(dwarf => {
-            dwarf.update(delta);
+        // 更新所有矮人，并移除死亡的矮人
+        const deadDwarfs: string[] = [];
+        this.dwarfs.forEach((dwarf, id) => {
+            if (dwarf.isAlive()) {
+                dwarf.update(delta);
+            } else {
+                // 记录死亡的矮人ID
+                deadDwarfs.push(id);
+            }
+        });
+        
+        // 清理死亡的矮人（如果死亡事件没有正确触发的备用方案）
+        deadDwarfs.forEach(id => {
+            const dwarf = this.dwarfs.get(id);
+            if (dwarf) {
+                console.warn(`[DwarfManager] 发现死亡矮人 ${id} 未被正确清理，现在清理`);
+                this.dwarfs.delete(id);
+                dwarf.destroy();
+            }
         });
         
         // 自动清理已收集的资源
@@ -304,6 +354,7 @@ export class DwarfManager {
     public destroy(): void {
         this.scene.events.off('resource-landed', this.handleResourceLanded, this);
         this.scene.events.off('building-purchased', this.handleBuildingRequest, this);
+        this.scene.events.off('dwarf-killed', this.handleDwarfKilled, this);
         // resource-drop事件已废弃
         
         // 清理WorldTaskManager
