@@ -18,7 +18,7 @@ export class MainGameScene extends Scene {
     private assetManager!: AssetManager;
     private match3System!: Match3System;
     private shop!: Shop;
-    private buildingManager!: BuildingManager;
+    public buildingManager!: BuildingManager;
     private dwarfManager!: DwarfManager;
     private monsterManager!: MonsterManager;
     private gameStateManager!: GameStateManager;
@@ -29,6 +29,8 @@ export class MainGameScene extends Scene {
     private match3Container!: Phaser.GameObjects.Container;
     private shopContainer!: Phaser.GameObjects.Container;
     private groundContainer!: Phaser.GameObjects.Container;
+    private buildingContainer!: Phaser.GameObjects.Container;  // 建筑层
+    private characterContainer!: Phaser.GameObjects.Container;  // 角色层（矮人、怪物）
     private topLayerContainer!: Phaser.GameObjects.Container;  // 顶层容器，用于掉落资源
     
     // 资源显示
@@ -244,7 +246,15 @@ export class MainGameScene extends Scene {
     }
 
     private createGroundArea() {
+        // 创建各个层级容器
         this.groundContainer = this.add.container(0, 0);
+        this.buildingContainer = this.add.container(0, 0);
+        this.characterContainer = this.add.container(0, 0);
+        
+        // 设置容器深度，确保正确的层级关系
+        this.groundContainer.setDepth(0);    // 地面层最后面
+        this.buildingContainer.setDepth(50); // 建筑层中间
+        this.characterContainer.setDepth(100); // 角色层最前面
         
         // land只是地面参考线，不需要显示
         // 地面位置在y=789
@@ -274,14 +284,14 @@ export class MainGameScene extends Scene {
             this.groundContainer.add(castle);
         }
         
-        // 创建建筑管理器
-        this.buildingManager = new BuildingManager(this, this.groundContainer);
+        // 创建建筑管理器（使用建筑容器）
+        this.buildingManager = new BuildingManager(this, this.buildingContainer);
         
-        // 创建矮人管理器
-        this.dwarfManager = new DwarfManager(this, this.groundContainer);
+        // 创建矮人管理器（使用角色容器）
+        this.dwarfManager = new DwarfManager(this, this.characterContainer);
         
-        // 创建怪物管理器
-        this.monsterManager = new MonsterManager(this, this.groundContainer);
+        // 创建怪物管理器（使用角色容器）
+        this.monsterManager = new MonsterManager(this, this.characterContainer);
         
         // 创建游戏状态管理器
         this.gameStateManager = new GameStateManager(this);
@@ -498,11 +508,8 @@ export class MainGameScene extends Scene {
     private handleBuildingPurchased(data: { productId: string; productType: string; productName: string }) {
         console.log(`Building purchased: ${data.productName} (${data.productType})`);
         
-        // 触发建筑放置事件
-        this.events.emit('place-building', {
-            buildingType: data.productType,
-            buildingId: data.productId
-        });
+        // 不再触发 place-building 事件，因为建筑应该通过地基→建造流程创建
+        // 建筑的创建已经由 building-foundation-place 事件处理
     }
 
     private showLoadingProgress() {

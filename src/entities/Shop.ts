@@ -200,7 +200,14 @@ export class Shop {
             product.purchased = true;
             this.productSlots[slotIndex].setPurchased(true);
             
-            // 触发建筑购买事件 - 先显示地基，然后安排建造
+            // 触发建筑购买事件（用于UI反馈等）
+            this.scene.events.emit('building-purchased', {
+                productId: product.id,
+                productType: product.type,
+                productName: product.name
+            });
+            
+            // 触发地基放置事件（这是建造流程的开始）
             this.scene.events.emit('building-foundation-place', {
                 productId: product.id,
                 productType: product.type,
@@ -208,6 +215,7 @@ export class Shop {
             });
             
             console.log(`Purchased ${product.name} for`, product.cost);
+            console.log(`Triggered building-foundation-place event for ${product.name}`);
             
             // 检查是否需要刷新商店
             this.checkForRefresh();

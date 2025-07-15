@@ -205,6 +205,7 @@ export class Dwarf {
         
         // 创建建造动画
         if (!animsManager.exists(`dwarf_build_${this.id}`)) {
+            console.log(`[Dwarf ${this.id}] 创建建造动画...`);
             if (this.scene.textures.exists('dwarf_build_1')) {
                 // 如果有专门的建造动画，使用它
                 const buildFrames = [];
@@ -215,6 +216,8 @@ export class Dwarf {
                     }
                 }
                 
+                console.log(`[Dwarf ${this.id}] 找到 ${buildFrames.length} 帧建造动画`);
+                
                 if (buildFrames.length > 0) {
                     animsManager.create({
                         key: `dwarf_build_${this.id}`,
@@ -222,8 +225,10 @@ export class Dwarf {
                         frameRate: 20, // 20帧/秒，统一帧率
                         repeat: -1
                     });
+                    console.log(`[Dwarf ${this.id}] 建造动画创建成功`);
                 }
             } else {
+                console.log(`[Dwarf ${this.id}] 没有找到建造动画帧，使用备用动画`);
                 // 回退到第一套待机动画
                 animsManager.create({
                     key: `dwarf_build_${this.id}`,
@@ -250,9 +255,12 @@ export class Dwarf {
                 this.playRandomIdleAnimation();
             } else if (animationType === 'build') {
                 const animKey = `dwarf_build_${this.id}`;
+                console.log(`[Dwarf ${this.id}] 尝试播放建造动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
                 if (this.scene.anims.exists(animKey)) {
                     this.sprite.play(animKey);
-                    console.log(`Dwarf ${this.id} playing build animation`);
+                    console.log(`[Dwarf ${this.id}] 成功播放建造动画`);
+                } else {
+                    console.warn(`[Dwarf ${this.id}] 建造动画不存在: ${animKey}`);
                 }
             }
         }
@@ -350,16 +358,19 @@ export class Dwarf {
         this.targetY = this.GROUND_Y; // 忽略y坐标，始终保持在地面
         this.isMoving = true;
         
-        // 开始移动时播放行走动画（除非在建造状态）
-        if (this.state !== DwarfState.BUILD) {
-            this.playAnimation('walk');
-        }
+        // 开始移动时播放行走动画
+        this.playAnimation('walk');
     }
 
     /**
      * 更新矮人逻辑 - 新状态机架构
      */
     public update(delta: number): void {
+        // 定期输出调试信息
+        if (Math.random() < 0.01) { // 1% 概率
+            console.log(`[Dwarf ${this.id}] update called, state: ${this.state}, position: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
+        }
+        
         // 1. 更新感知系统
         this.updatePerception(delta);
         
@@ -395,8 +406,10 @@ export class Dwarf {
             this.isMoving = false;
             
             // 停止移动时播放对应状态的动画
+            // 但是在BUILD状态下，让executeBuild来决定何时播放建造动画
             if (this.state === DwarfState.BUILD) {
-                this.playAnimation('build');
+                // BUILD状态下不在这里播放动画，等待executeBuild处理
+                console.log(`[Dwarf ${this.id}] 到达目标，BUILD状态，等待executeBuild处理动画`);
             } else {
                 this.playAnimation('idle');
             }
@@ -455,12 +468,13 @@ export class Dwarf {
     }
     
     /**
-     * 状态机评估转换
+     * 状态机评估转换 - 每帧检查更高优先级任务
      */
     private evaluateTransitions(): void {
-        // 优先级顺序：Combat > Deliver > Build > Gather > Idle
+        // 获取当前状态的优先级
+        const currentPriority = this.getStatePriority(this.state);
         
-        // 1. 最高优先级：战斗
+        // 1. 最高优先级：战斗（优先级=5）
         if (this.hasNearbyMonster()) {
             if (this.state !== DwarfState.COMBAT) {
                 this.enterCombat();
@@ -468,50 +482,110 @@ export class Dwarf {
             return;
         }
         
-        // 2. 交付优先级：如果背包非空
-        if (this.inventory.size > 0) {
-            if (this.state !== DwarfState.DELIVER) {
-                this.enterDeliver();
-            }
-            return;
+        // 如果当前在战斗状态但没有敌人了，需要重新评估
+        if (this.state === DwarfState.COMBAT) {
+            // 战斗结束，清理状态，继续评估其他任务
+            this.combatTarget = null;
         }
         
-        // 3. 建筑优先级：检查待建筑任务
-        if (this.hasPendingBuild()) {
-            if (this.state !== DwarfState.BUILD) {
+        // 2. 建筑优先级（优先级=4）
+        const hasBuildTask = this.hasPendingBuild();
+        if (hasBuildTask) {
+            console.log(`[Dwarf ${this.id}] evaluateTransitions - 发现建筑任务！当前状态: ${this.state}, 当前优先级: ${currentPriority}`);
+        }
+        
+        if (hasBuildTask) {
+            // 只有当前状态优先级低于建筑时才切换
+            if (currentPriority < 4) {
+                console.log(`[Dwarf ${this.id}] 从 ${this.state} 切换到 BUILD 状态`);
                 this.enterBuild();
+                return;
+            } else if (this.state === DwarfState.BUILD) {
+                // 保持建筑状态
+                console.log(`[Dwarf ${this.id}] 保持 BUILD 状态`);
+                return;
             }
-            return;
         }
         
-        // 4. 如果已经在收集状态，保持当前状态
+        // 如果当前在建筑状态但没有建筑任务了，继续评估
+        if (this.state === DwarfState.BUILD && !this.targetBuildId) {
+            // 建筑完成，继续评估其他任务
+            console.log(`[Dwarf ${this.id}] BUILD 状态但没有 targetBuildId，继续评估其他任务`);
+        }
+        
+        // 如果当前在建造状态且有任务，保持状态
+        if (this.state === DwarfState.BUILD && this.targetBuildId) {
+            return;  // 保持建造状态直到完成
+        }
+        
+        // 3. 交付优先级（优先级=3）
+        if (this.inventory.size > 0) {
+            // 只有当前状态优先级低于交付时才切换
+            if (currentPriority < 3) {
+                this.enterDeliver();
+                return;
+            } else if (this.state === DwarfState.DELIVER) {
+                // 保持交付状态
+                return;
+            }
+        }
+        
+        // 4. 收集优先级（优先级=2）
+        // 如果当前在收集状态且有有效目标，继续收集
         if (this.state === DwarfState.GATHER && this.targetResourceId) {
-            return;
-        }
-        
-        // 5. 收集优先级：通过WorldTaskManager获取可用资源（只在非收集状态时检查）
-        if (this.state !== DwarfState.GATHER) {
-            const worldTaskMgr = this.getWorldTaskManager();
-            if (worldTaskMgr) {
-                const availableResources = worldTaskMgr.getAvailableResources();
-                
-                if (availableResources.length > 0) {
-                    // 尝试锁定第一个可用资源
-                    const resource = availableResources[0];
-                    const locked = worldTaskMgr.tryLockResource(resource.resourceRef.id, this.id);
-                    
-                    if (locked) {
-                        this.targetResourceId = resource.resourceRef.id;
-                        this.enterGather();
-                        return;
+            const resource = this.getTargetResource();
+            if (resource && !resource.getIsCollected()) {
+                // 继续当前的收集任务
+                return;
+            } else {
+                // 资源已被收集或不存在，清理状态
+                if (this.targetResourceId) {
+                    const worldTaskMgr = this.getWorldTaskManager();
+                    if (worldTaskMgr) {
+                        worldTaskMgr.releaseResourceLock(this.targetResourceId);
                     }
+                    this.targetResourceId = null;
                 }
             }
         }
         
-        // 6. 默认状态：待机
+        // 寻找新的资源
+        const worldTaskMgr = this.getWorldTaskManager();
+        if (worldTaskMgr) {
+            const availableResources = worldTaskMgr.getAvailableResources();
+            
+            if (availableResources.length > 0 && !this.targetResourceId) {
+                // 尝试锁定新资源
+                const resource = availableResources[0];
+                const locked = worldTaskMgr.tryLockResource(resource.resourceRef.id, this.id);
+                
+                if (locked) {
+                    this.targetResourceId = resource.resourceRef.id;
+                    if (this.state !== DwarfState.GATHER) {
+                        this.enterGather();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        // 5. 默认状态：待机（优先级=1）
         if (this.state !== DwarfState.IDLE) {
             this.stayIdle();
+        }
+    }
+    
+    /**
+     * 获取状态优先级
+     */
+    private getStatePriority(state: DwarfState): number {
+        switch (state) {
+            case DwarfState.COMBAT: return 5;
+            case DwarfState.BUILD: return 4;
+            case DwarfState.DELIVER: return 3;
+            case DwarfState.GATHER: return 2;
+            case DwarfState.IDLE: return 1;
+            default: return 0;
         }
     }
     
@@ -584,19 +658,42 @@ export class Dwarf {
     private enterBuild(): void {
         if (this.state === DwarfState.BUILD) return;
         
+        // 保存当前的 targetBuildId，因为 abortCurrentAction 会清除它
+        const savedTargetBuildId = this.targetBuildId;
+        
         this.abortCurrentAction();
         this.state = DwarfState.BUILD;
         
-        // 移动到建筑位置
-        const buildSite = this.findAvailableBuildSite();
-        if (buildSite) {
-            this.targetBuildId = buildSite.id;
-            const buildPos = buildSite.getPosition();
-            this.moveToTarget(buildPos.x, this.GROUND_Y);
+        // 恢复 targetBuildId
+        this.targetBuildId = savedTargetBuildId;
+        
+        console.log(`[Dwarf ${this.id}] 进入建筑状态，targetBuildId: ${this.targetBuildId}`);
+        
+        // 获取已分配的建造任务
+        if (this.targetBuildId) {
+            const buildingManager = (this.scene as any).buildingManager;
+            if (buildingManager) {
+                const buildingTasks = buildingManager.getBuildingTasks();
+                console.log(`[Dwarf ${this.id}] 所有建造任务:`, buildingTasks);
+                
+                const buildingTask = buildingTasks.find((task: any) => task.id === this.targetBuildId);
+                if (buildingTask) {
+                    // 移动到建筑位置
+                    const buildPos = buildingTask.position;
+                    const targetX = buildPos.x + 81; // 移动到建筑中心
+                    this.moveToTarget(targetX, this.GROUND_Y); 
+                    console.log(`[Dwarf ${this.id}] 移动到建筑位置: ${buildingTask.productName} at x=${targetX}`);
+                } else {
+                    console.error(`[Dwarf ${this.id}] 找不到建造任务 ${this.targetBuildId}`);
+                }
+            } else {
+                console.error(`[Dwarf ${this.id}] 无法获取 buildingManager`);
+            }
+        } else {
+            console.error(`[Dwarf ${this.id}] 进入建筑状态但没有 targetBuildId`);
         }
         
         this.updateStatusDisplay();
-        console.log(`[Dwarf ${this.id}] 进入建筑状态`);
     }
     
     /**
@@ -725,7 +822,10 @@ export class Dwarf {
         
         // 到达建造位置，开始建造
         if (buildingTask.status === 'waiting_for_dwarf') {
+            console.log(`[Dwarf ${this.id}] 到达建造位置，调用 startBuilding`);
             buildingManager.startBuilding(this.targetBuildId);
+            
+            console.log(`[Dwarf ${this.id}] 切换到建造动画`);
             this.playAnimation('build');
             
             // 创建建筑动画（这将在Building实体中处理）
@@ -740,13 +840,17 @@ export class Dwarf {
         
         // 建造过程中保持建造动画
         if (buildingTask.status === 'building') {
-            // 建造持续时间（可以根据建筑类型调整）
-            const buildDuration = 5000; // 5秒
-            
-            // 这里可以添加建造进度逻辑
-            // 简单起见，我们等待建筑动画完成后触发完成事件
-            
-            // 注意：实际的建造完成会由建筑动画系统触发
+            // 确保持续播放建造动画
+            if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+                const currentAnim = this.sprite.anims.currentAnim;
+                const isPlaying = this.sprite.anims.isPlaying;
+                
+                // 如果动画停止了或者不是建造动画，重新播放
+                if (!isPlaying || !currentAnim || !currentAnim.key.includes('build')) {
+                    console.log(`[Dwarf ${this.id}] 重新播放建造动画，当前动画: ${currentAnim?.key}, 是否播放: ${isPlaying}`);
+                    this.playAnimation('build');
+                }
+            }
         }
     }
     
@@ -898,14 +1002,27 @@ export class Dwarf {
             return true;
         }
         
-        // 尝试分配新的建造任务
-        const buildingManager = (this.scene as any).buildingManager;
-        if (buildingManager) {
-            const assignedTask = buildingManager.tryAssignBuildingTask(this.id);
-            if (assignedTask) {
-                this.targetBuildId = assignedTask.id;
-                console.log(`[Dwarf ${this.id}] 分配到建造任务: ${assignedTask.productName}`);
-                return true;
+        // 简单直接：检查是否有地基存在
+        const mainScene = this.scene as any;
+        const buildingManager = mainScene.buildingManager;
+        
+        if (!buildingManager) {
+            return false;
+        }
+        
+        // 获取所有建造任务
+        const allTasks = buildingManager.getBuildingTasks();
+        
+        // 找到第一个未分配的任务
+        for (const task of allTasks) {
+            if (task.status === 'waiting_for_dwarf' && !task.assignedDwarfId) {
+                // 直接分配任务
+                const assigned = buildingManager.tryAssignBuildingTask(this.id);
+                if (assigned) {
+                    this.targetBuildId = assigned.id;
+                    console.log(`[Dwarf ${this.id}] 发现地基，分配建造任务: ${assigned.productName}`);
+                    return true;
+                }
             }
         }
         
@@ -1004,6 +1121,13 @@ export class Dwarf {
      */
     public getState(): DwarfState {
         return this.state;
+    }
+    
+    /**
+     * 获取精灵对象
+     */
+    public getSprite(): Phaser.GameObjects.GameObject | null {
+        return this.sprite || null;
     }
     
     /**

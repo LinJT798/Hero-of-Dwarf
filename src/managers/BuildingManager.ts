@@ -60,7 +60,8 @@ export class BuildingManager {
      * 设置事件监听
      */
     private setupEventListeners(): void {
-        this.scene.events.on('place-building', this.handlePlaceBuilding, this);
+        // 移除 place-building 监听，建筑只能通过地基→建造流程创建
+        // this.scene.events.on('place-building', this.handlePlaceBuilding, this);
         this.scene.events.on('building-foundation-place', this.handleFoundationPlace, this);
     }
 
@@ -150,6 +151,7 @@ export class BuildingManager {
      * 处理地基放置（购买后立即显示地基）
      */
     private handleFoundationPlace(data: { productId: string; productType: string; productName: string }): void {
+        console.log(`[BuildingManager] handleFoundationPlace called for ${data.productName}`);
         const position = this.findNextAvailablePosition();
         
         if (position) {
@@ -167,6 +169,7 @@ export class BuildingManager {
             };
             
             this.buildingTasks.set(taskId, buildingTask);
+            console.log(`[BuildingManager] Created building task ${taskId}, total tasks: ${this.buildingTasks.size}`);
             
             // 标记位置为已占用
             position.occupied = true;
@@ -175,9 +178,9 @@ export class BuildingManager {
             // 触发建造任务事件，让矮人系统知道有建造工作
             this.scene.events.emit('building-task-created', buildingTask);
             
-            console.log(`Foundation placed for ${data.productName} at (${position.x}, ${position.y})`);
+            console.log(`[BuildingManager] Foundation placed for ${data.productName} at (${position.x}, ${position.y})`);
         } else {
-            console.warn('No available position for foundation');
+            console.warn('[BuildingManager] No available position for foundation');
         }
     }
     

@@ -65,9 +65,15 @@ export class DwarfManager {
         const dwarfId = `dwarf_${this.nextDwarfId++}`;
         const dwarf = new Dwarf(this.scene, dwarfId, position.x, position.y);
         
+        // 添加矮人精灵到容器
+        const dwarfSprite = dwarf.getSprite();
+        if (dwarfSprite) {
+            this.container.add(dwarfSprite);
+        }
+        
         this.dwarfs.set(dwarfId, dwarf);
         
-        console.log(`Spawned dwarf: ${dwarfId}`);
+        console.log(`Spawned dwarf: ${dwarfId} at (${position.x}, ${position.y})`);
         return dwarf;
     }
 
