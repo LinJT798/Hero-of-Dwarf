@@ -4,15 +4,15 @@
       "displayName": "矮人",
       "type": "friendly",
       "combat": {
-        "health": 100,
-        "maxHealth": 100,
-        "attack": 20,
+        "health": 150,
+        "maxHealth": 150,
+        "attack": 25,
         "range": 50,
         "attackSpeed": 1500,
-        "armor": 5
+        "armor": 7
       },
       "movement": {
-        "speed": 100,
+        "speed": 150,
         "groundY": 789
       },
       "ai": {

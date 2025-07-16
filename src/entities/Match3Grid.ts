@@ -1,5 +1,4 @@
 import { Match3Cell } from './Match3Cell';
-import { configManager } from '../systems/ConfigManager';
 import { PathFinder } from '../utils/PathFinder';
 import { DroppedResource } from './DroppedResource';
 
@@ -88,6 +87,7 @@ export class Match3Grid {
     private fillRandomResources(): void {
         const totalCells = this.GRID_WIDTH * this.GRID_HEIGHT; // 9 * 7 = 63
         const usableCells = totalCells - 1; // 62个，留一个空格
+        
         const resourceCount = this.RESOURCE_TYPES.length; // 5种资源
         
         // 创建资源数组，确保每种资源都是偦数个
@@ -302,19 +302,6 @@ export class Match3Grid {
         console.log(`[Match3Grid] 创建资源2 - 类型: ${cell2.resourceType}, 位置: (${pos2.x + this.CELL_SIZE / 2}, ${pos2.y + this.CELL_SIZE / 2})`);
         
         console.log(`[Match3Grid] 当前资源总数: ${this.droppedResources.length}`);
-        
-        // 触发资源掉落事件，通知DwarfManager注册资源
-        this.scene.events.emit('resource-drop', {
-            resourceType: cell1.resourceType,
-            position: { x: pos1.x + this.CELL_SIZE / 2, y: pos1.y + this.CELL_SIZE / 2 },
-            resource: resource1
-        });
-        
-        this.scene.events.emit('resource-drop', {
-            resourceType: cell2.resourceType,
-            position: { x: pos2.x + this.CELL_SIZE / 2, y: pos2.y + this.CELL_SIZE / 2 },
-            resource: resource2
-        });
     }
 
     /**

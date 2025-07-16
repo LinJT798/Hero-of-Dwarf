@@ -25,7 +25,7 @@
       "buildingType": "arrow_tower",
       "name": "弓箭塔",
       "cost": {
-        "wood": 1
+        "wood": 2
       },
       "weight": 10,
       "minWave": 1
@@ -48,6 +48,30 @@
       "cost": {
         "wood": 1,
         "stone": 3,
+        "gold": 2
+      },
+      "weight": 6,
+      "minWave": 1
+    },
+    {
+      "id": "arrow_tower_4",
+      "buildingType": "arrow_tower",
+      "name": "弓箭塔",
+      "cost": {
+        "wood": 3,
+        "stone": 3,
+        "mithril": 2
+      },
+      "weight": 6,
+      "minWave": 1
+    },
+    {
+      "id": "arrow_tower_5",
+      "buildingType": "arrow_tower",
+      "name": "弓箭塔",
+      "cost": {
+        "wood": 4,
+        "mithril": 3,
         "gold": 2
       },
       "weight": 6,

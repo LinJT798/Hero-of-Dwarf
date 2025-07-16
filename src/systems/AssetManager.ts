@@ -248,6 +248,10 @@ export class AssetManager {
             { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
             { key: 'wave_normal_icon', type: 'image', path: 'assets/images/wave_normal_icon.png' },
             { key: 'wave_hard_icon', type: 'image', path: 'assets/images/wave_hard_icon.png' },
+            
+            // 波次提示横幅
+            { key: 'wave_normal_banner', type: 'image', path: 'assets/images/wave_normal_banner.png' },
+            { key: 'wave_hard_banner', type: 'image', path: 'assets/images/wave_hard_banner.png' },
             { key: 'building1', type: 'image', path: 'assets/images/building1.png' },
             { key: 'building2', type: 'image', path: 'assets/images/building2.png' },
             { key: 'building3', type: 'image', path: 'assets/images/building3.png' },

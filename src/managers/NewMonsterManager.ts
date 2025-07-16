@@ -231,6 +231,13 @@ export class NewMonsterManager {
             return;
         }
         
+        // 显示波次提示横幅
+        const waveType = this.currentWaveConfig.waveType || 'normal';
+        const mainGameScene = this.scene as any;
+        if (mainGameScene.waveBanner) {
+            mainGameScene.waveBanner.showWaveBanner(waveType, waveNumber);
+        }
+        
         // 计算总怪物数量
         this.monstersToSpawn = 0;
         this.currentWaveConfig.monsters.forEach(monsterGroup => {

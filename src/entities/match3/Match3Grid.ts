@@ -85,6 +85,7 @@ export class Match3Grid {
         const totalCells = this.GRID_WIDTH * this.GRID_HEIGHT; // 63
         const blocks: (string | null)[] = [];
         
+        
         // 分配方案：9种方块，确保每种都是偶数个
         // 5种资源：各8个 = 40个
         // 4种非资源：各5个 = 20个  
@@ -273,8 +274,7 @@ export class Match3Grid {
         // 触发消除事件
         this.eventBus.emit('cells-eliminated', { 
             cells, 
-            blockType,
-            isResource 
+            resourceType: blockType
         });
         
         // 清空选中列表

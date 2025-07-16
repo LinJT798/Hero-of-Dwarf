@@ -36,7 +36,7 @@
         },
         "flightTime": 2000,
         "arcHeightFactor": 0.3,
-        "minArcHeight": 100,
+        "minArcHeight": 200,
         "hitRadius": 50
       },
       "animations": {

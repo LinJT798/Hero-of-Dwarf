@@ -11,6 +11,7 @@ import { NewMonsterManager } from '../managers/NewMonsterManager';
 import { GameStateManager } from '../systems/GameStateManager';
 import { LandAnimation } from '../entities/LandAnimation';
 import { WaveProgressBar } from '../entities/WaveProgressBar';
+import { WaveBanner } from '../ui/WaveBanner';
 
 /**
  * 主游戏场景
@@ -27,6 +28,7 @@ export class MainGameScene extends Scene {
     private gameStateManager!: GameStateManager;
     private landAnimation!: LandAnimation;
     private waveProgressBar!: WaveProgressBar;
+    private waveBanner!: WaveBanner;
     
     // UI区域
     private backgroundContainer!: Phaser.GameObjects.Container;
@@ -125,6 +127,9 @@ export class MainGameScene extends Scene {
         
         // 设置事件监听
         this.setupEventListeners();
+        
+        // 创建波次横幅系统
+        this.waveBanner = new WaveBanner(this);
         
         // 确保顶层容器真的在最上层
         this.children.bringToTop(this.topLayerContainer);
