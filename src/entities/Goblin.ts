@@ -232,14 +232,16 @@ export class Goblin implements CombatUnit {
      */
     private createHealthBar(): void {
         const barY = this.y + this.healthBarOffsetY; // 精灵上方
+        const adjustedWidth = this.healthBarWidth * 0.6; // 缩短40%
         
-        // 背景
-        this.healthBarBg = this.scene.add.rectangle(this.x, barY, this.healthBarWidth, this.healthBarHeight, 0x000000);
-        this.healthBarBg.setOrigin(0.5, 0.5);
+        // 背景（带黑色描边）
+        this.healthBarBg = this.scene.add.rectangle(this.x, barY, adjustedWidth, this.healthBarHeight, 0x000000);
+        this.healthBarBg.setOrigin(0, 0.5); // 左边对齐
+        this.healthBarBg.setStrokeStyle(1, 0x000000); // 1像素黑色描边
         
         // 血条
-        this.healthBar = this.scene.add.rectangle(this.x, barY, this.healthBarWidth, this.healthBarHeight, 0x00FF00);
-        this.healthBar.setOrigin(0.5, 0.5);
+        this.healthBar = this.scene.add.rectangle(this.x, barY, adjustedWidth, this.healthBarHeight, 0x00FF00);
+        this.healthBar.setOrigin(0, 0.5); // 左边对齐
     }
     
     /**
@@ -249,9 +251,10 @@ export class Goblin implements CombatUnit {
         if (!this.healthBar || !this.healthBarBg) return;
         
         const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
+        const adjustedWidth = this.healthBarWidth * 0.6; // 缩短40%
         
-        // 更新血条宽度
-        this.healthBar.setDisplaySize(this.healthBarWidth * healthRatio, this.healthBarHeight);
+        // 更新血条宽度（从右往左缩）
+        this.healthBar.setDisplaySize(adjustedWidth * healthRatio, this.healthBarHeight);
         
         // 更新血条颜色
         let color = 0x00FF00; // 绿色
@@ -264,10 +267,11 @@ export class Goblin implements CombatUnit {
         
         this.healthBar.setFillStyle(color);
         
-        // 更新血条位置
+        // 更新血条位置（保持左对齐）
         const barY = this.y + this.healthBarOffsetY;
-        this.healthBar.setPosition(this.x, barY);
-        this.healthBarBg.setPosition(this.x, barY);
+        const barX = this.x - adjustedWidth / 2; // 调整x位置使血条居中
+        this.healthBar.setPosition(barX, barY);
+        this.healthBarBg.setPosition(barX, barY);
     }
     
     /**

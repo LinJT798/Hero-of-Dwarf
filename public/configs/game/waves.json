@@ -15,7 +15,7 @@
       "monsters": [
         {
           "type": "goblin",
-          "count": 10,
+          "count": 3,
           "spawnInterval": 1000
         }
       ]

@@ -449,15 +449,17 @@ export class Dwarf implements CombatUnit {
     private createHealthBar(): void {
         const barWidth = this.unitConfig?.display.healthBar.width || 60;
         const barHeight = this.unitConfig?.display.healthBar.height || 4;
+        const adjustedWidth = barWidth * 0.6; // 缩短40%
         const barY = this.y + (this.unitConfig?.display.healthBar.offsetY || -85); // 精灵上方
         
-        // 背景
-        this.healthBarBg = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x000000);
-        this.healthBarBg.setOrigin(0.5, 0.5);
+        // 背景（带黑色描边）
+        this.healthBarBg = this.scene.add.rectangle(this.x, barY, adjustedWidth, barHeight, 0x000000);
+        this.healthBarBg.setOrigin(0, 0.5); // 左边对齐
+        this.healthBarBg.setStrokeStyle(1, 0x000000); // 1像素黑色描边
         
         // 血条
-        this.healthBar = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x00FF00);
-        this.healthBar.setOrigin(0.5, 0.5);
+        this.healthBar = this.scene.add.rectangle(this.x, barY, adjustedWidth, barHeight, 0x00FF00);
+        this.healthBar.setOrigin(0, 0.5); // 左边对齐
     }
     
     /**
@@ -468,9 +470,11 @@ export class Dwarf implements CombatUnit {
         
         const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
         const barWidth = this.unitConfig?.display.healthBar.width || 60;
+        const adjustedWidth = barWidth * 0.6; // 缩短40%
+        const barHeight = this.unitConfig?.display.healthBar.height || 4;
         
-        // 更新血条宽度
-        this.healthBar.setDisplaySize(barWidth * healthRatio, 4);
+        // 更新血条宽度（从右往左缩）
+        this.healthBar.setDisplaySize(adjustedWidth * healthRatio, barHeight);
         
         // 更新血条颜色
         let color = 0x00FF00; // 绿色
@@ -483,10 +487,12 @@ export class Dwarf implements CombatUnit {
         
         this.healthBar.setFillStyle(color);
         
-        // 更新血条位置
+        // 更新血条位置（保持左对齐）
         const barOffsetY = this.unitConfig?.display.healthBar.offsetY || -85;
-        this.healthBar.setPosition(this.x, this.y + barOffsetY);
-        this.healthBarBg.setPosition(this.x, this.y + barOffsetY);
+        const barX = this.x - adjustedWidth / 2; // 调整x位置使血条居中
+        const barY = this.y + barOffsetY;
+        this.healthBar.setPosition(barX, barY);
+        this.healthBarBg.setPosition(barX, barY);
     }
 
     /**
@@ -750,6 +756,10 @@ export class Dwarf implements CombatUnit {
             if (this.state === DwarfState.BUILD) {
                 // BUILD状态下不在这里播放动画，等待executeBuild处理
                 console.log(`[Dwarf ${this.id}] 到达目标，BUILD状态，等待executeBuild处理动画`);
+            } else if (this.state === DwarfState.COMBAT) {
+                // COMBAT状态下，保持当前动画状态，不切换到idle
+                console.log(`[Dwarf ${this.id}] 到达攻击位置，保持战斗准备状态`);
+                // 不调用 playAnimation，让 updateCombat 处理攻击动画
             } else if (this.state === DwarfState.IDLE) {
                 // IDLE状态下，如果是移动行为完成，不调用playAnimation，而是让updateIdleAnimation处理
                 if (this.currentIdleBehavior === 'move') {

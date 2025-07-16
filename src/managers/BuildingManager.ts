@@ -293,6 +293,10 @@ export class BuildingManager {
         this.buildings.set(building.id, building);
         this.container.add(building.getSprite());
         
+        // 添加血条到容器
+        const healthBarObjects = building.getHealthBarObjects();
+        healthBarObjects.forEach(obj => this.container.add(obj));
+        
         // 清理任务
         this.buildingTasks.delete(taskId);
         
@@ -396,6 +400,7 @@ class Building implements CombatUnit {
     private scene: Phaser.Scene;
     private sprite: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
     private healthBar: Phaser.GameObjects.Rectangle | null = null;
+    private healthBarBg: Phaser.GameObjects.Rectangle | null = null;
     private nameText: Phaser.GameObjects.Text;
     
     // 建筑属性
@@ -468,7 +473,8 @@ class Building implements CombatUnit {
         this.nameText = this.scene.add.text(0, 0, '', { fontSize: '1px' });
         this.nameText.setVisible(false);
 
-        // Figma中没有血条显示
+        // 创建血条
+        this.createHealthBar();
     }
 
     /**
@@ -670,6 +676,31 @@ class Building implements CombatUnit {
     }
 
     /**
+     * 创建血条
+     */
+    private createHealthBar(): void {
+        const barWidth = 80;
+        const adjustedWidth = barWidth * 0.6; // 缩短40%
+        const barHeight = 6;
+        const barOffsetY = -85; // 建筑上方
+        
+        // 计算血条位置（建筑中心上方）
+        const buildingWidth = this.buildingSize?.width || 162;
+        const buildingHeight = this.buildingSize?.height || 162;
+        const barX = this.x + buildingWidth / 2 - adjustedWidth / 2; // 调整x位置使血条居中
+        const barY = this.y + buildingHeight / 2 + barOffsetY;
+        
+        // 背景（带黑色描边）
+        this.healthBarBg = this.scene.add.rectangle(barX, barY, adjustedWidth, barHeight, 0x000000);
+        this.healthBarBg.setOrigin(0, 0.5); // 左边对齐
+        this.healthBarBg.setStrokeStyle(1, 0x000000); // 1像素黑色描边
+        
+        // 血条（绿色）
+        this.healthBar = this.scene.add.rectangle(barX, barY, adjustedWidth, barHeight, 0x00FF00);
+        this.healthBar.setOrigin(0, 0.5); // 左边对齐
+    }
+
+    /**
      * 获取建筑显示名称
      */
     private getBuildingDisplayName(): string {
@@ -685,25 +716,34 @@ class Building implements CombatUnit {
      * 更新血条
      */
     private updateHealthBar(): void {
-        if (this.healthBar) {
-            this.healthBar.destroy();
-        }
+        if (!this.healthBar || !this.healthBarBg) return;
 
         const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
-        const barWidth = 50;
-        const barHeight = 4;
+        const barWidth = 80;
+        const adjustedWidth = barWidth * 0.6; // 缩短40%
+        const barHeight = 6;
         
-        // 背景
-        const healthBg = this.scene.add.rectangle(this.x, this.y - 35, barWidth, barHeight, 0x000000);
+        // 更新血条宽度（从右往左缩）
+        this.healthBar.setDisplaySize(adjustedWidth * healthRatio, barHeight);
         
-        // 血条
-        this.healthBar = this.scene.add.rectangle(
-            this.x - barWidth/2 + (barWidth * healthRatio)/2, 
-            this.y - 35, 
-            barWidth * healthRatio, 
-            barHeight, 
-            healthRatio > 0.5 ? 0x00FF00 : healthRatio > 0.25 ? 0xFFFF00 : 0xFF0000
-        );
+        // 更新血条颜色
+        let color = 0x00FF00; // 绿色
+        if (healthRatio <= 0.25) {
+            color = 0xFF0000; // 红色
+        } else if (healthRatio <= 0.5) {
+            color = 0xFFFF00; // 黄色
+        }
+        
+        this.healthBar.setFillStyle(color);
+        
+        // 确保血条位置正确（建筑中心上方）
+        const buildingWidth = this.buildingSize?.width || 162;
+        const buildingHeight = this.buildingSize?.height || 162;
+        const barX = this.x + buildingWidth / 2 - adjustedWidth / 2; // 调整x位置使血条居中
+        const barY = this.y + buildingHeight / 2 - 85;
+        
+        this.healthBar.setPosition(barX, barY);
+        this.healthBarBg.setPosition(barX, barY);
     }
 
     /**
@@ -731,6 +771,9 @@ class Building implements CombatUnit {
         
         // 更新idle动画
         this.updateIdleAnimation(delta);
+        
+        // 更新血条位置（以防动画改变了位置）
+        this.updateHealthBar();
     }
 
     /**
@@ -1010,6 +1053,16 @@ class Building implements CombatUnit {
     public getSprite(): Phaser.GameObjects.GameObject {
         return this.sprite;
     }
+    
+    /**
+     * 获取血条对象（用于添加到容器）
+     */
+    public getHealthBarObjects(): Phaser.GameObjects.GameObject[] {
+        const objects: Phaser.GameObjects.GameObject[] = [];
+        if (this.healthBarBg) objects.push(this.healthBarBg);
+        if (this.healthBar) objects.push(this.healthBar);
+        return objects;
+    }
 
     /**
      * 检查是否被摧毁
@@ -1025,7 +1078,13 @@ class Building implements CombatUnit {
     }
     
     public getPosition(): { x: number; y: number } {
-        return { x: this.x, y: this.y };
+        // 返回建筑底部中心点，这样更接近地面上的单位
+        const width = this.buildingSize?.width || 162;
+        const height = this.buildingSize?.height || 162;
+        return { 
+            x: this.x + width / 2, 
+            y: this.y + height 
+        };
     }
     
     public isAlive(): boolean {
@@ -1068,6 +1127,9 @@ class Building implements CombatUnit {
                 this.nameText.destroy();
                 if (this.healthBar) {
                     this.healthBar.destroy();
+                }
+                if (this.healthBarBg) {
+                    this.healthBarBg.destroy();
                 }
             }
         });
