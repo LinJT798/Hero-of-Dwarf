@@ -426,6 +426,12 @@ class Building implements CombatUnit {
     private buildingConfig: BuildingConfig | null = null;
     private buildingSize: { width: number; height: number };
     private projectileConfig: any = null;
+    
+    // 死亡动画相关
+    private isDying: boolean = false;
+    private deathAnimationTimer: number = 0;
+    private deathAnimationDuration: number = 5000; // 5秒播放完成
+    private buildAnimationFrameCount: number = 100; // 建造动画总帧数
 
     constructor(scene: Phaser.Scene, id: string, buildingType: string, productId: string, x: number, y: number) {
         this.scene = scene;
@@ -750,13 +756,104 @@ class Building implements CombatUnit {
      * 受到伤害
      */
     public takeDamage(damage: number): void {
-        if (this.isDestroyed) return;
+        if (this.isDestroyed || this.isDying) return;
 
         this.combatAttributes.health = Math.max(0, this.combatAttributes.health - damage);
         this.updateHealthBar();
 
         if (this.combatAttributes.health <= 0) {
-            this.destroy();
+            this.die();
+        }
+    }
+
+    /**
+     * 建筑死亡处理
+     */
+    private die(): void {
+        if (this.isDying) return;
+        
+        this.isDying = true;
+        this.combatAttributes.health = 0;
+        
+        console.log(`Building ${this.id} (${this.buildingType}) is dying`);
+        
+        // 立即销毁血条
+        if (this.healthBar) {
+            this.healthBar.destroy();
+            this.healthBar = null;
+        }
+        if (this.healthBarBg) {
+            this.healthBarBg.destroy();
+            this.healthBarBg = null;
+        }
+        
+        // 如果是弓箭塔，播放倒放的建造动画
+        if (this.buildingType === 'arrow_tower' && this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.playDeathAnimation();
+        } else {
+            // 其他建筑直接等待5秒后销毁
+            this.deathAnimationTimer = 0;
+        }
+        
+        // 触发建筑死亡事件
+        this.scene.events.emit('building-destroyed', {
+            buildingId: this.id,
+            buildingType: this.buildingType,
+            position: { x: this.x, y: this.y }
+        });
+    }
+    
+    /**
+     * 播放死亡动画（倒放建造动画）
+     */
+    private playDeathAnimation(): void {
+        if (!(this.sprite instanceof Phaser.GameObjects.Sprite)) return;
+        
+        const sprite = this.sprite;
+        
+        // 停止当前动画
+        sprite.stop();
+        
+        // 创建倒放的建造动画
+        const animKey = `${this.buildingType}_death_${this.id}`;
+        
+        if (!this.scene.anims.exists(animKey)) {
+            // 收集建造动画的帧
+            const buildFrames = [];
+            for (let i = 1; i <= this.buildAnimationFrameCount; i++) {
+                if (this.scene.textures.exists(`${this.buildingType}_build_${i}`)) {
+                    buildFrames.push({ key: `${this.buildingType}_build_${i}` });
+                }
+            }
+            
+            // 倒序排列帧
+            buildFrames.reverse();
+            
+            if (buildFrames.length > 0) {
+                this.scene.anims.create({
+                    key: animKey,
+                    frames: buildFrames,
+                    frameRate: 20, // 20fps
+                    repeat: 0 // 播放一次
+                });
+                
+                console.log(`Created death animation for ${this.buildingType} with ${buildFrames.length} frames`);
+            }
+        }
+        
+        // 播放死亡动画
+        if (this.scene.anims.exists(animKey)) {
+            sprite.play(animKey);
+            
+            // 监听动画完成
+            sprite.once('animationcomplete', () => {
+                console.log(`Building ${this.id} death animation completed`);
+                // 动画完成后开始5秒计时
+                this.deathAnimationTimer = 0;
+            });
+        } else {
+            // 如果没有动画，直接开始计时
+            this.deathAnimationTimer = 0;
         }
     }
 
@@ -765,6 +862,12 @@ class Building implements CombatUnit {
      */
     public update(delta: number, monsters: CombatUnit[] = []): void {
         if (this.isDestroyed) return;
+        
+        // 如果正在死亡，更新死亡计时器
+        if (this.isDying) {
+            this.updateDeathState(delta);
+            return;
+        }
 
         // 更新攻击逻辑
         this.updateAttackLogic(monsters);
@@ -774,6 +877,19 @@ class Building implements CombatUnit {
         
         // 更新血条位置（以防动画改变了位置）
         this.updateHealthBar();
+    }
+    
+    /**
+     * 更新死亡状态
+     */
+    private updateDeathState(delta: number): void {
+        this.deathAnimationTimer += delta;
+        
+        // 检查是否到达销毁时间
+        if (this.deathAnimationTimer >= this.deathAnimationDuration) {
+            console.log(`Building ${this.id} death timer completed, destroying`);
+            this.destroy();
+        }
     }
 
     /**
@@ -944,14 +1060,25 @@ class Building implements CombatUnit {
                 const timeInSeconds = flightTime / 1000;
                 const predictedX = currentPos.x - (moveSpeed * timeInSeconds);
                 
+                // 调整为瞄准哥布林中心（哥布林高度79px，底部中心对齐）
                 return {
                     x: predictedX,
-                    y: currentPos.y
+                    y: currentPos.y - 39.5 // 哥布林高度的一半
                 };
             }
         }
         
-        // 对于其他目标或静止状态，返回当前位置
+        // 对于其他目标或静止状态，也需要调整到中心位置
+        // 假设是哥布林，调整为中心
+        if ('getSprite' in target) {
+            // 哥布林高度79px，底部中心对齐
+            return {
+                x: currentPos.x,
+                y: currentPos.y - 39.5
+            };
+        }
+        
+        // 其他目标返回当前位置
         return currentPos;
     }
     
@@ -1088,7 +1215,7 @@ class Building implements CombatUnit {
     }
     
     public isAlive(): boolean {
-        return !this.isDestroyed && this.combatAttributes.health > 0;
+        return !this.isDestroyed && !this.isDying && this.combatAttributes.health > 0;
     }
     
     public canAttack(target: CombatUnit): boolean {
@@ -1127,9 +1254,11 @@ class Building implements CombatUnit {
                 this.nameText.destroy();
                 if (this.healthBar) {
                     this.healthBar.destroy();
+                    this.healthBar = null;
                 }
                 if (this.healthBarBg) {
                     this.healthBarBg.destroy();
+                    this.healthBarBg = null;
                 }
             }
         });

@@ -57,6 +57,11 @@ export class Dwarf implements CombatUnit {
     // 战斗相关
     private attackTimer: number = 0;
     
+    // 死亡系统
+    private deathTimer: number = 0;
+    private deathAnimationCompleted: boolean = false;
+    private readonly DEATH_DISAPPEAR_DELAY: number = 5000; // 5秒后消失
+    
     // 配置参数
     private dwarfSize: number;
     private senseRadius: number;
@@ -431,6 +436,38 @@ export class Dwarf implements CombatUnit {
                 });
             }
         }
+        
+        // 创建死亡动画
+        if (!animsManager.exists(`dwarf_death_${this.id}`)) {
+            console.log(`[Dwarf ${this.id}] 创建死亡动画...`);
+            if (this.scene.textures.exists('dwarf_death_1')) {
+                const deathFrames = [];
+                for (let i = 1; i <= 101; i++) {
+                    if (this.scene.textures.exists(`dwarf_death_${i}`)) {
+                        deathFrames.push({ key: `dwarf_death_${i}` });
+                    }
+                }
+                
+                if (deathFrames.length > 0) {
+                    animsManager.create({
+                        key: `dwarf_death_${this.id}`,
+                        frames: deathFrames,
+                        frameRate: 20, // 20帧/秒
+                        repeat: 0 // 播放一次
+                    });
+                    console.log(`[Dwarf ${this.id}] 死亡动画创建成功，共 ${deathFrames.length} 帧`);
+                }
+            } else {
+                console.log(`[Dwarf ${this.id}] 没有找到死亡动画帧，使用备用动画`);
+                // 回退到静止的第一帧
+                animsManager.create({
+                    key: `dwarf_death_${this.id}`,
+                    frames: [{ key: 'dwarf_walk_1' }],
+                    frameRate: 1,
+                    repeat: 0
+                });
+            }
+        }
     }
 
     /**
@@ -544,6 +581,15 @@ export class Dwarf implements CombatUnit {
                     console.log(`[Dwarf ${this.id}] 成功播放攻击动画`);
                 } else {
                     console.warn(`[Dwarf ${this.id}] 攻击动画不存在: ${animKey}`);
+                }
+            } else if (animationType === 'death') {
+                const animKey = `dwarf_death_${this.id}`;
+                console.log(`[Dwarf ${this.id}] 尝试播放死亡动画: ${animKey}, 动画存在: ${this.scene.anims.exists(animKey)}`);
+                if (this.scene.anims.exists(animKey)) {
+                    sprite.play(animKey);
+                    console.log(`[Dwarf ${this.id}] 成功播放死亡动画`);
+                } else {
+                    console.warn(`[Dwarf ${this.id}] 死亡动画不存在: ${animKey}`);
                 }
             }
         } catch (error) {
@@ -993,6 +1039,11 @@ export class Dwarf implements CombatUnit {
      * 状态机评估转换 - 每帧检查更高优先级任务
      */
     private evaluateTransitions(): void {
+        // 如果已经死亡，不再进行任何状态转换
+        if (this.state === DwarfState.DEAD) {
+            return;
+        }
+        
         // 获取当前状态的优先级
         const currentPriority = this.getStatePriority(this.state);
         
@@ -1130,6 +1181,9 @@ export class Dwarf implements CombatUnit {
                 break;
             case DwarfState.IDLE:
                 this.executeIdle(delta);
+                break;
+            case DwarfState.DEAD:
+                this.executeDead(delta);
                 break;
         }
     }
@@ -1432,6 +1486,26 @@ export class Dwarf implements CombatUnit {
     private executeIdle(delta: number): void {
         // 待机行为现在由updateIdleAnimation统一处理
         // 这里不再需要额外的逻辑
+    }
+    
+    /**
+     * 执行死亡状态
+     */
+    private executeDead(delta: number): void {
+        // 如果死亡动画还未完成，等待
+        if (!this.deathAnimationCompleted) {
+            return;
+        }
+        
+        // 更新死亡计时器
+        this.deathTimer += delta;
+        
+        // 检查是否到达消失时间
+        if (this.deathTimer >= this.DEATH_DISAPPEAR_DELAY) {
+            console.log(`[Dwarf ${this.id}] 死亡5秒后，准备销毁`);
+            // 触发销毁
+            this.destroy();
+        }
     }
 
     // =================== 感知系统 ===================
@@ -1758,12 +1832,14 @@ export class Dwarf implements CombatUnit {
             this.sprite.destroy();
         }
         
-        // 销毁血条
+        // 销毁血条（如果还存在的话）
         if (this.healthBar) {
             this.healthBar.destroy();
+            this.healthBar = null;
         }
         if (this.healthBarBg) {
             this.healthBarBg.destroy();
+            this.healthBarBg = null;
         }
         
         console.log(`Dwarf ${this.id} destroyed`);
@@ -1830,19 +1906,42 @@ export class Dwarf implements CombatUnit {
         // 设置死亡标记
         this.combatAttributes.health = 0;
         
-        // 停止所有动画
-        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
-            this.sprite.stop();
+        // 切换到死亡状态
+        this.state = DwarfState.DEAD;
+        
+        // 立即销毁血条
+        if (this.healthBar) {
+            this.healthBar.destroy();
+            this.healthBar = null;
+        }
+        if (this.healthBarBg) {
+            this.healthBarBg.destroy();
+            this.healthBarBg = null;
         }
         
-        // 触发死亡事件，让管理器处理清理
+        // 停止当前动画并播放死亡动画
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            this.sprite.stop();
+            this.playAnimation('death');
+            
+            // 监听死亡动画完成
+            this.sprite.once('animationcomplete', (animation: any) => {
+                if (animation.key === `dwarf_death_${this.id}`) {
+                    this.deathAnimationCompleted = true;
+                    console.log(`[Dwarf ${this.id}] 死亡动画播放完成，开始5秒倒计时`);
+                }
+            });
+        } else {
+            // 如果不是Sprite，直接标记动画完成
+            this.deathAnimationCompleted = true;
+        }
+        
+        // 触发死亡事件，让管理器处理
         this.scene.events.emit('dwarf-killed', {
             dwarfId: this.id,
             dwarf: this,
             position: this.getPosition()
         });
-        
-        // 不在这里调用destroy，让管理器来处理
     }
 }
 
@@ -1854,7 +1953,8 @@ export enum DwarfState {
     GATHER = 'gather',     // 收集资源
     DELIVER = 'deliver',   // 交付资源
     BUILD = 'build',       // 建造建筑
-    COMBAT = 'combat'      // 战斗
+    COMBAT = 'combat',     // 战斗
+    DEAD = 'dead'          // 死亡
 }
 
 /**

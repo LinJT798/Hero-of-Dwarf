@@ -293,6 +293,9 @@ export class AssetManager {
             // 矮人攻击动画 (101帧，20fps)
             { key: 'dwarf_attack', type: 'frameSequence', path: 'assets/animations/dwarf/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
+            // 矮人死亡动画 (101帧，20fps)
+            { key: 'dwarf_death', type: 'frameSequence', path: 'assets/animations/dwarf/death', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            
             // 建筑相关资源
             { key: 'foundation', type: 'image', path: 'assets/images/foundation.png' },
             

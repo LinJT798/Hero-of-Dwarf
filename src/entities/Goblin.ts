@@ -88,8 +88,10 @@ export class Goblin implements CombatUnit {
             // 战斗属性
             this.combatAttributes = { ...this.unitConfig.combat };
             
-            // 移动属性
-            this.moveSpeed = this.unitConfig.movement.speed;
+            // 移动属性 - 添加20%的随机变化
+            const baseSpeed = this.unitConfig.movement.speed;
+            const speedVariation = baseSpeed * 0.2; // 20%的变化范围
+            this.moveSpeed = baseSpeed + (Math.random() * speedVariation * 2 - speedVariation); // ±20%
             this.groundY = this.unitConfig.movement.groundY;
             
             // AI属性
@@ -101,7 +103,7 @@ export class Goblin implements CombatUnit {
             this.healthBarHeight = this.unitConfig.display.healthBar.height;
             this.healthBarOffsetY = this.unitConfig.display.healthBar.offsetY;
             
-            console.log(`Goblin config loaded: health=${this.combatAttributes.health}, speed=${this.moveSpeed}, size=${this.goblinSize}`);
+            console.log(`Goblin config loaded: health=${this.combatAttributes.health}, speed=${this.moveSpeed.toFixed(1)} (base: ${baseSpeed}), size=${this.goblinSize}`);
         } else {
             console.warn('Goblin config not found, using defaults');
             this.loadDefaultConfig();
@@ -121,7 +123,10 @@ export class Goblin implements CombatUnit {
             armor: 5
         };
         
-        this.moveSpeed = 50;
+        // 添加随机变化到默认速度
+        const baseSpeed = 50;
+        const speedVariation = baseSpeed * 0.2; // 20%的变化范围
+        this.moveSpeed = baseSpeed + (Math.random() * speedVariation * 2 - speedVariation); // ±20%
         this.groundY = 789;
         this.deathDuration = 20000;
         this.goblinSize = 79;
@@ -496,6 +501,16 @@ export class Goblin implements CombatUnit {
         this.currentTarget = null;
         this.deathTimer = 0;
         
+        // 立即销毁血条
+        if (this.healthBar) {
+            this.healthBar.destroy();
+            this.healthBar = null;
+        }
+        if (this.healthBarBg) {
+            this.healthBarBg.destroy();
+            this.healthBarBg = null;
+        }
+        
         // 播放死亡动画
         this.playAnimation('goblin_death');
         
@@ -536,9 +551,11 @@ export class Goblin implements CombatUnit {
         }
         if (this.healthBar) {
             this.healthBar.destroy();
+            this.healthBar = null;
         }
         if (this.healthBarBg) {
             this.healthBarBg.destroy();
+            this.healthBarBg = null;
         }
         
         console.log(`Goblin ${this.id} destroyed`);

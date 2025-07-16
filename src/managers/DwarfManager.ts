@@ -103,13 +103,11 @@ export class DwarfManager {
         
         const dwarf = this.dwarfs.get(data.dwarfId);
         if (dwarf) {
-            // 先从Map中移除
+            // 只从Map中移除，不立即销毁
+            // 让矮人自己在死亡动画播放完成后销毁
             this.dwarfs.delete(data.dwarfId);
             
-            // 然后销毁矮人
-            dwarf.destroy();
-            
-            console.log(`[DwarfManager] 矮人 ${data.dwarfId} 已从管理器中移除并销毁`);
+            console.log(`[DwarfManager] 矮人 ${data.dwarfId} 已从管理器中移除，等待其自行销毁`);
             
             // 不再重新生成矮人
             console.log(`[DwarfManager] 剩余矮人数量: ${this.dwarfs.size}`);
@@ -292,9 +290,9 @@ export class DwarfManager {
         deadDwarfs.forEach(id => {
             const dwarf = this.dwarfs.get(id);
             if (dwarf) {
-                console.warn(`[DwarfManager] 发现死亡矮人 ${id} 未被正确清理，现在清理`);
+                console.warn(`[DwarfManager] 发现死亡矮人 ${id} 未被正确清理，从管理器中移除`);
                 this.dwarfs.delete(id);
-                dwarf.destroy();
+                // 不调用destroy，让矮人自己在死亡动画播放完成后销毁
             }
         });
         
