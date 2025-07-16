@@ -186,7 +186,7 @@ export class AssetManager {
                 Object.keys(buildingsConfig.buildings).forEach(buildingType => {
                     // 特殊处理：arrow_tower 使用 archer_icon
                     const iconKey = buildingType === 'arrow_tower' ? 'archer_icon' : `${buildingType}_icon`;
-                    const iconPath = `/assets/images/${iconKey}.png`;
+                    const iconPath = `assets/images/${iconKey}.png`;
                     
                     if (!this.isAssetLoaded(iconKey)) {
                         buildingIcons.push({
@@ -227,92 +227,92 @@ export class AssetManager {
     async loadBaseAssets(): Promise<void> {
         const figmaAssets: AssetConfig[] = [
             // 主菜单资源 (允许加载失败)
-            { key: 'menu-background', type: 'image', path: '/assets/images/menu-background.png' },
-            { key: 'game-title', type: 'image', path: '/assets/images/game-title.png' },
-            { key: 'start-button', type: 'image', path: '/assets/images/start-button.png' },
+            { key: 'menu-background', type: 'image', path: 'assets/images/menu-background.png' },
+            { key: 'game-title', type: 'image', path: 'assets/images/game-title.png' },
+            { key: 'start-button', type: 'image', path: 'assets/images/start-button.png' },
             
             // 主菜单音效 (允许加载失败)
-            { key: 'button-click', type: 'audio', path: '/assets/audio/button-click.wav' },
-            { key: 'button-hover', type: 'audio', path: '/assets/audio/button-hover.wav' },
+            { key: 'button-click', type: 'audio', path: 'assets/audio/button-click.wav' },
+            { key: 'button-hover', type: 'audio', path: 'assets/audio/button-hover.wav' },
             
             // 背景图片
-            { key: 'back_sky', type: 'image', path: '/assets/images/back_sky.png' },
-            { key: 'back_land', type: 'image', path: '/assets/images/back_land.png' },
-            { key: 'game_frame', type: 'image', path: '/assets/images/game_frame.png' },
+            { key: 'back_sky', type: 'image', path: 'assets/images/back_sky.png' },
+            { key: 'back_land', type: 'image', path: 'assets/images/back_land.png' },
+            { key: 'game_frame', type: 'image', path: 'assets/images/game_frame.png' },
             
             // 商店相关图片
-            { key: 'store', type: 'image', path: '/assets/images/store.png' },
-            { key: 'archer_icon', type: 'image', path: '/assets/images/archer_icon.png' },
+            { key: 'store', type: 'image', path: 'assets/images/store.png' },
+            { key: 'archer_icon', type: 'image', path: 'assets/images/archer_icon.png' },
             
             // 进度条资源
             { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
             { key: 'wave_normal_icon', type: 'image', path: 'assets/images/wave_normal_icon.png' },
             { key: 'wave_hard_icon', type: 'image', path: 'assets/images/wave_hard_icon.png' },
-            { key: 'building1', type: 'image', path: '/assets/images/building1.png' },
-            { key: 'building2', type: 'image', path: '/assets/images/building2.png' },
-            { key: 'building3', type: 'image', path: '/assets/images/building3.png' },
+            { key: 'building1', type: 'image', path: 'assets/images/building1.png' },
+            { key: 'building2', type: 'image', path: 'assets/images/building2.png' },
+            { key: 'building3', type: 'image', path: 'assets/images/building3.png' },
             
             // 建筑图片
-            { key: 'castle', type: 'image', path: '/assets/images/castle.png' },
-            { key: 'archer_building', type: 'image', path: '/assets/images/archer_building.png' },
+            { key: 'castle', type: 'image', path: 'assets/images/castle.png' },
+            { key: 'archer_building', type: 'image', path: 'assets/images/archer_building.png' },
             
             // UI图片
-            { key: 'coin_store', type: 'image', path: '/assets/images/coin_store.png' },
-            { key: 'coin_game', type: 'image', path: '/assets/images/coin_game.png' },
-            { key: 'cube_frame', type: 'image', path: '/assets/images/cube_frame.png' },
+            { key: 'coin_store', type: 'image', path: 'assets/images/coin_store.png' },
+            { key: 'coin_game', type: 'image', path: 'assets/images/coin_game.png' },
+            { key: 'cube_frame', type: 'image', path: 'assets/images/cube_frame.png' },
             
             // 原始资源图片 (用于商店和信息面板)
-            { key: 'coin', type: 'image', path: '/assets/images/coin.png' },
-            { key: 'wood', type: 'image', path: '/assets/images/wood.png' },
-            { key: 'stone', type: 'image', path: '/assets/images/stone.png' },
-            { key: 'mithril', type: 'image', path: '/assets/images/mithril.png' },
-            { key: 'food', type: 'image', path: '/assets/images/food.png' },
+            { key: 'coin', type: 'image', path: 'assets/images/coin.png' },
+            { key: 'wood', type: 'image', path: 'assets/images/wood.png' },
+            { key: 'stone', type: 'image', path: 'assets/images/stone.png' },
+            { key: 'mithril', type: 'image', path: 'assets/images/mithril.png' },
+            { key: 'food', type: 'image', path: 'assets/images/food.png' },
             
             // 非资源方块图片 (可消除但不掉落资源)
-            { key: 'dirt', type: 'image', path: '/assets/images/dirt.png' },
-            { key: 'grass', type: 'image', path: '/assets/images/grass.png' },
-            { key: 'lava', type: 'image', path: '/assets/images/lava.png' },
-            { key: 'sand', type: 'image', path: '/assets/images/sand.png' },
+            { key: 'dirt', type: 'image', path: 'assets/images/dirt.png' },
+            { key: 'grass', type: 'image', path: 'assets/images/grass.png' },
+            { key: 'lava', type: 'image', path: 'assets/images/lava.png' },
+            { key: 'sand', type: 'image', path: 'assets/images/sand.png' },
             
             // 弓箭矢图片 (用于弓箭塔攻击特效)
-            { key: 'arrow', type: 'image', path: '/assets/images/arrow.png' },
+            { key: 'arrow', type: 'image', path: 'assets/images/arrow.png' },
             
             // 角色图片
-            { key: 'dwarf_character', type: 'image', path: '/assets/images/processed_frame_1 1.png' },
+            { key: 'dwarf_character', type: 'image', path: 'assets/images/processed_frame_1 1.png' },
             
             // 矮人动画 (101帧序列，processed_frame_x命名)
-            { key: 'dwarf_walk', type: 'frameSequence', path: '/assets/animations/dwarf/walk', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'dwarf_walk', type: 'frameSequence', path: 'assets/animations/dwarf/walk', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 矮人待机动画 (两套，各101帧)
-            { key: 'dwarf_idle1', type: 'frameSequence', path: '/assets/animations/dwarf/idle1', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
-            { key: 'dwarf_idle2', type: 'frameSequence', path: '/assets/animations/dwarf/idle2', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'dwarf_idle1', type: 'frameSequence', path: 'assets/animations/dwarf/idle1', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'dwarf_idle2', type: 'frameSequence', path: 'assets/animations/dwarf/idle2', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 矮人建造动画 (73帧，20fps)
-            { key: 'dwarf_build', type: 'frameSequence', path: '/assets/animations/dwarf/build', frameCount: 73, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'dwarf_build', type: 'frameSequence', path: 'assets/animations/dwarf/build', frameCount: 73, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 矮人攻击动画 (101帧，20fps)
-            { key: 'dwarf_attack', type: 'frameSequence', path: '/assets/animations/dwarf/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'dwarf_attack', type: 'frameSequence', path: 'assets/animations/dwarf/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 建筑相关资源
-            { key: 'foundation', type: 'image', path: '/assets/images/foundation.png' },
+            { key: 'foundation', type: 'image', path: 'assets/images/foundation.png' },
             
             // 弓箭塔建造动画 (100帧，20fps)
-            { key: 'arrow_tower_build', type: 'frameSequence', path: '/assets/animations/buildings/arrow_tower/build', frameCount: 100, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'arrow_tower_build', type: 'frameSequence', path: 'assets/animations/buildings/arrow_tower/build', frameCount: 100, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 弓箭塔待机动画 (101帧，20fps)
-            { key: 'arrow_tower_idle', type: 'frameSequence', path: '/assets/animations/arrow_tower/idle', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'arrow_tower_idle', type: 'frameSequence', path: 'assets/animations/arrow_tower/idle', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 哥布林动画 (101帧，20fps)
-            { key: 'goblin_walk', type: 'frameSequence', path: '/assets/animations/goblin/walk', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
-            { key: 'goblin_attack', type: 'frameSequence', path: '/assets/animations/goblin/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
-            { key: 'goblin_death', type: 'frameSequence', path: '/assets/animations/goblin/death', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'goblin_walk', type: 'frameSequence', path: 'assets/animations/goblin/walk', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'goblin_attack', type: 'frameSequence', path: 'assets/animations/goblin/attack', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'goblin_death', type: 'frameSequence', path: 'assets/animations/goblin/death', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 地面微风动画 (101帧，20fps)
-            { key: 'land_wind', type: 'frameSequence', path: '/assets/animations/backgrounds/land/wind', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
+            { key: 'land_wind', type: 'frameSequence', path: 'assets/animations/backgrounds/land/wind', frameCount: 101, fileExtension: 'png', namePattern: 'processed_frame_' },
             
             // 连连看区域
-            { key: 'map', type: 'image', path: '/assets/images/map.png' },
-            { key: 'land', type: 'image', path: '/assets/images/land.png' }
+            { key: 'map', type: 'image', path: 'assets/images/map.png' },
+            { key: 'land', type: 'image', path: 'assets/images/land.png' }
         ];
 
         try {

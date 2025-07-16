@@ -239,16 +239,17 @@ export class Shop {
             this.productSlots[slotIndex].setPurchased(true);
             
             // 触发建筑购买事件（用于UI反馈等）
+            const productType = product.buildingType || product.type;
             this.scene.events.emit('building-purchased', {
                 productId: product.id,
-                productType: product.type,
+                productType: productType,
                 productName: product.name
             });
             
             // 触发地基放置事件（这是建造流程的开始）
             this.scene.events.emit('building-foundation-place', {
                 productId: product.id,
-                productType: product.type,
+                productType: productType,
                 productName: product.name
             });
             
@@ -420,9 +421,10 @@ class ShopSlot {
         if (product) {
             // 尝试加载建筑图标
             // 特殊处理：arrow_tower 使用 archer_icon
-            let textureKey = product.type === 'arrow_tower' ? 'archer_icon' : `${product.type}_icon`;
+            const productType = product.buildingType || product.type;
+            let textureKey = productType === 'arrow_tower' ? 'archer_icon' : `${productType}_icon`;
             
-            console.log(`[ShopSlot] Setting product ${product.type}, looking for texture: ${textureKey}`);
+            console.log(`[ShopSlot] Setting product ${productType}, looking for texture: ${textureKey}`);
             console.log(`[ShopSlot] Texture exists: ${this.scene.textures.exists(textureKey)}`);
             
             // 计算图标位置
