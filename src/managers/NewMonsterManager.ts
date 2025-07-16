@@ -22,6 +22,12 @@ export class NewMonsterManager {
     private waveCompleteTimer: number = 0;
     private waveCompleteDelay: number;
     
+    // 新的时间系统
+    private gameStartTime: number = 0;
+    private totalGameTime: number = 0;
+    private currentGameTime: number = 0;
+    private waveStartTimes: number[] = [];
+    
     // 生成配置
     private spawnPosition: { x: number; y: number };
     
@@ -48,7 +54,7 @@ export class NewMonsterManager {
         this.loadWaveConfig();
         
         this.setupEventListeners();
-        this.startWave(1);
+        this.startGameTimer();
         
         console.log('NewMonsterManager initialized with config');
     }
@@ -67,12 +73,33 @@ export class NewMonsterManager {
             this.spawnPosition = { ...wavesConfig.waveSettings.spawnPosition };
             this.waveConfigs = [...wavesConfig.waves];
             
+            // 计算总游戏时间和波次开始时间
+            this.calculateGameTiming();
+            
             console.log(`[NewMonsterManager] Wave config loaded: ${this.maxWaves} waves, spawn at (${this.spawnPosition.x}, ${this.spawnPosition.y})`);
-            console.log('[NewMonsterManager] Wave configs:', this.waveConfigs);
+            console.log(`[NewMonsterManager] Total game time: ${this.totalGameTime}ms`);
+            console.log('[NewMonsterManager] Wave start times:', this.waveStartTimes);
         } else {
             console.warn('[NewMonsterManager] Wave config not found, using defaults');
             this.loadDefaultWaveConfig();
         }
+    }
+    
+    /**
+     * 计算游戏时间和波次开始时间
+     */
+    private calculateGameTiming(): void {
+        this.waveStartTimes = [];
+        let accumulatedTime = 0;
+        
+        this.waveConfigs.forEach(wave => {
+            accumulatedTime += wave.delayFromPrevious || 0;
+            this.waveStartTimes.push(accumulatedTime);
+        });
+        
+        this.totalGameTime = accumulatedTime;
+        
+        console.log(`[NewMonsterManager] Calculated timing - Total: ${this.totalGameTime}ms, Wave times:`, this.waveStartTimes);
     }
     
     /**
@@ -83,14 +110,16 @@ export class NewMonsterManager {
         this.waveCompleteDelay = 3000;
         this.spawnPosition = { x: 1200, y: 789 };
         
-        // 默认波次配置
+        // 默认波次配置（保持向后兼容）
         this.waveConfigs = [
-            { waveNumber: 1, monsters: [{ type: 'goblin', count: 3, spawnInterval: 2000 }] },
-            { waveNumber: 2, monsters: [{ type: 'goblin', count: 5, spawnInterval: 1500 }] },
-            { waveNumber: 3, monsters: [{ type: 'goblin', count: 7, spawnInterval: 1200 }] },
-            { waveNumber: 4, monsters: [{ type: 'goblin', count: 10, spawnInterval: 1000 }] },
-            { waveNumber: 5, monsters: [{ type: 'goblin', count: 15, spawnInterval: 800 }] }
+            { waveNumber: 1, waveType: 'normal', delayFromPrevious: 30000, monsters: [{ type: 'goblin', count: 3, spawnInterval: 2000 }] },
+            { waveNumber: 2, waveType: 'normal', delayFromPrevious: 45000, monsters: [{ type: 'goblin', count: 5, spawnInterval: 1500 }] },
+            { waveNumber: 3, waveType: 'hard', delayFromPrevious: 60000, monsters: [{ type: 'goblin', count: 7, spawnInterval: 1200 }] },
+            { waveNumber: 4, waveType: 'normal', delayFromPrevious: 50000, monsters: [{ type: 'goblin', count: 10, spawnInterval: 1000 }] },
+            { waveNumber: 5, waveType: 'hard', delayFromPrevious: 70000, monsters: [{ type: 'goblin', count: 15, spawnInterval: 800 }] }
         ];
+        
+        this.calculateGameTiming();
     }
     
     /**
@@ -135,6 +164,46 @@ export class NewMonsterManager {
             attackerType: data.goblinType,
             position: data.position
         });
+    }
+    
+    /**
+     * 开始游戏计时器
+     */
+    public startGameTimer(): void {
+        this.gameStartTime = Date.now();
+        this.currentGameTime = 0;
+        
+        console.log(`[NewMonsterManager] Game timer started, total duration: ${this.totalGameTime}ms`);
+        
+        // 延迟触发游戏开始事件，确保所有UI组件都已创建
+        this.scene.time.delayedCall(100, () => {
+            console.log(`[NewMonsterManager] Emitting game-timer-started event`);
+            this.scene.events.emit('game-timer-started', {
+                totalTime: this.totalGameTime,
+                waves: this.waveConfigs
+            });
+        });
+    }
+    
+    /**
+     * 获取当前游戏时间
+     */
+    public getCurrentGameTime(): number {
+        return this.currentGameTime;
+    }
+    
+    /**
+     * 获取总游戏时间
+     */
+    public getTotalGameTime(): number {
+        return this.totalGameTime;
+    }
+    
+    /**
+     * 获取波次配置
+     */
+    public getWaveConfigs(): any[] {
+        return this.waveConfigs;
     }
     
     /**
@@ -226,6 +295,21 @@ export class NewMonsterManager {
     }
     
     /**
+     * 检查是否需要开始新波次
+     */
+    private checkWaveStart(): void {
+        // 如果当前没有激活波次，检查是否到时间开始下一波
+        if (!this.isWaveActive && this.currentWave <= this.maxWaves) {
+            const targetTime = this.waveStartTimes[this.currentWave - 1];
+            
+            if (targetTime && this.currentGameTime >= targetTime) {
+                console.log(`[NewMonsterManager] Time to start wave ${this.currentWave} at ${this.currentGameTime}ms (target: ${targetTime}ms)`);
+                this.startWave(this.currentWave);
+            }
+        }
+    }
+    
+    /**
      * 检查波次是否完成
      */
     private checkWaveComplete(): void {
@@ -299,6 +383,12 @@ export class NewMonsterManager {
      * 主更新方法
      */
     public update(delta: number): void {
+        // 更新游戏时间
+        this.currentGameTime += delta;
+        
+        // 检查是否需要开始新波次
+        this.checkWaveStart();
+        
         // 处理生成队列
         if (this.isWaveActive && this.spawnQueue.length > 0) {
             this.spawnTimer += delta;
@@ -329,13 +419,11 @@ export class NewMonsterManager {
         // 检查波次完成
         this.checkWaveComplete();
         
-        // 处理波次间隔
-        if (!this.isWaveActive && this.currentWave < this.maxWaves) {
-            this.waveCompleteTimer += delta;
-            if (this.waveCompleteTimer >= this.waveCompleteDelay) {
-                this.startWave(this.currentWave + 1);
-            }
-        }
+        // 发送时间更新事件给进度条
+        this.scene.events.emit('game-time-update', {
+            currentTime: this.currentGameTime,
+            totalTime: this.totalGameTime
+        });
     }
     
     /**

@@ -10,6 +10,8 @@
   "waves": [
     {
       "waveNumber": 1,
+      "waveType": "normal",
+      "delayFromPrevious": 3000,
       "monsters": [
         {
           "type": "goblin",
@@ -20,6 +22,8 @@
     },
     {
       "waveNumber": 2,
+      "waveType": "normal",
+      "delayFromPrevious": 45000,
       "monsters": [
         {
           "type": "goblin",
@@ -30,31 +34,13 @@
     },
     {
       "waveNumber": 3,
+      "waveType": "hard",
+      "delayFromPrevious": 60000,
       "monsters": [
         {
           "type": "goblin",
           "count": 7,
           "spawnInterval": 1200
-        }
-      ]
-    },
-    {
-      "waveNumber": 4,
-      "monsters": [
-        {
-          "type": "goblin",
-          "count": 10,
-          "spawnInterval": 1000
-        }
-      ]
-    },
-    {
-      "waveNumber": 5,
-      "monsters": [
-        {
-          "type": "goblin",
-          "count": 15,
-          "spawnInterval": 800
         }
       ]
     }

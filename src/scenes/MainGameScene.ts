@@ -10,6 +10,7 @@ import { MonsterManager } from '../managers/MonsterManager';
 import { NewMonsterManager } from '../managers/NewMonsterManager';
 import { GameStateManager } from '../systems/GameStateManager';
 import { LandAnimation } from '../entities/LandAnimation';
+import { WaveProgressBar } from '../entities/WaveProgressBar';
 
 /**
  * 主游戏场景
@@ -25,6 +26,7 @@ export class MainGameScene extends Scene {
     private newMonsterManager!: NewMonsterManager;
     private gameStateManager!: GameStateManager;
     private landAnimation!: LandAnimation;
+    private waveProgressBar!: WaveProgressBar;
     
     // UI区域
     private backgroundContainer!: Phaser.GameObjects.Container;
@@ -317,6 +319,9 @@ export class MainGameScene extends Scene {
         
         // 创建游戏信息显示
         this.createGameInfo();
+        
+        // 创建波次进度条
+        this.createWaveProgressBar();
     }
 
     private createSidebar() {
@@ -391,6 +396,67 @@ export class MainGameScene extends Scene {
     private createGameInfo() {
         // Figma中没有游戏信息显示，删除所有内容
     }
+    
+    private createWaveProgressBar() {
+        // 用户提供的具体配置
+        const progressBarConfig = {
+            // 进度条底图配置
+            backgroundX: 1031,
+            backgroundY: 371,
+            backgroundWidth: 234,
+            backgroundHeight: 35,
+            
+            // 进度条填充区域配置
+            fillX: 1053,
+            fillY: 380,
+            fillWidth: 192,
+            fillHeight: 17,
+            fillColor: 0xFED562,  // #FED562 金黄色
+            
+            // 波次图标配置
+            iconY: 385,
+            iconSize: 38,
+            
+            // 资源纹理
+            backgroundTexture: 'wave_progress_bg',
+            normalIconTexture: 'wave_normal_icon',
+            hardIconTexture: 'wave_hard_icon'
+        };
+        
+        // 检查资源是否存在
+        if (!this.textures.exists(progressBarConfig.backgroundTexture)) {
+            console.warn(`[MainGameScene] Progress bar background texture '${progressBarConfig.backgroundTexture}' not found`);
+        }
+        
+        if (!this.textures.exists(progressBarConfig.normalIconTexture)) {
+            console.warn(`[MainGameScene] Normal wave icon texture '${progressBarConfig.normalIconTexture}' not found`);
+        }
+        
+        if (!this.textures.exists(progressBarConfig.hardIconTexture)) {
+            console.warn(`[MainGameScene] Hard wave icon texture '${progressBarConfig.hardIconTexture}' not found`);
+        }
+        
+        // 创建进度条
+        this.waveProgressBar = new WaveProgressBar(
+            this,
+            progressBarConfig.backgroundX,
+            progressBarConfig.backgroundY,
+            progressBarConfig.backgroundWidth,
+            progressBarConfig.backgroundHeight,
+            progressBarConfig.fillX,
+            progressBarConfig.fillY,
+            progressBarConfig.fillWidth,
+            progressBarConfig.fillHeight,
+            progressBarConfig.backgroundTexture,
+            progressBarConfig.fillColor,
+            progressBarConfig.iconY,
+            progressBarConfig.iconSize,
+            progressBarConfig.normalIconTexture,
+            progressBarConfig.hardIconTexture
+        );
+        
+        console.log('[MainGameScene] Wave progress bar created');
+    }
 
     private setupEventListeners() {
         // 监听窗口大小变化
@@ -408,6 +474,10 @@ export class MainGameScene extends Scene {
         
         // 监听资源变化
         resourceManager.addListener(this.handleResourceChange.bind(this));
+        
+        // 监听进度条相关事件
+        this.events.on('game-timer-started', this.handleGameTimerStarted, this);
+        this.events.on('game-time-update', this.handleGameTimeUpdate, this);
     }
 
     private handleResize() {
@@ -622,5 +692,22 @@ export class MainGameScene extends Scene {
         
         // 直接切换到主菜单场景
         this.scene.start('MainMenuScene');
+    }
+    
+    // 进度条事件处理方法
+    private handleGameTimerStarted(data: { totalTime: number; waves: any[] }) {
+        console.log(`[MainGameScene] Game timer started - total time: ${data.totalTime}ms, waves: ${data.waves.length}`);
+        
+        // 设置进度条的波次数据
+        if (this.waveProgressBar) {
+            this.waveProgressBar.setWaves(data.waves);
+        }
+    }
+    
+    private handleGameTimeUpdate(data: { currentTime: number; totalTime: number }) {
+        // 更新进度条
+        if (this.waveProgressBar) {
+            this.waveProgressBar.updateProgress(data.currentTime);
+        }
     }
 }

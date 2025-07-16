@@ -57,7 +57,7 @@
         "armor": 5
       },
       "movement": {
-        "speed": 50,
+        "speed": 30,
         "groundY": 789
       },
       "ai": {

@@ -19,6 +19,8 @@ export interface MonsterSpawnConfig {
 
 export interface WaveConfig {
     waveNumber: number;
+    waveType: 'normal' | 'hard';
+    delayFromPrevious: number;
     monsters: MonsterSpawnConfig[];
 }
 

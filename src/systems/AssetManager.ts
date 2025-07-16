@@ -210,6 +210,20 @@ export class AssetManager {
     /**
      * 预加载Figma图片资源
      */
+    /**
+     * 加载进度条相关资源
+     */
+    loadProgressBarAssets(): void {
+        // 进度条底图
+        this.loadImage('wave_progress_bg', 'assets/images/wave_progress_bg.png');
+        
+        // 波次图标
+        this.loadImage('wave_normal_icon', 'assets/images/wave_normal_icon.png');
+        this.loadImage('wave_hard_icon', 'assets/images/wave_hard_icon.png');
+        
+        console.log('[AssetManager] Progress bar assets loaded');
+    }
+    
     async loadBaseAssets(): Promise<void> {
         const figmaAssets: AssetConfig[] = [
             // 主菜单资源 (允许加载失败)
@@ -229,6 +243,11 @@ export class AssetManager {
             // 商店相关图片
             { key: 'store', type: 'image', path: '/assets/images/store.png' },
             { key: 'archer_icon', type: 'image', path: '/assets/images/archer_icon.png' },
+            
+            // 进度条资源
+            { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
+            { key: 'wave_normal_icon', type: 'image', path: 'assets/images/wave_normal_icon.png' },
+            { key: 'wave_hard_icon', type: 'image', path: 'assets/images/wave_hard_icon.png' },
             { key: 'building1', type: 'image', path: '/assets/images/building1.png' },
             { key: 'building2', type: 'image', path: '/assets/images/building2.png' },
             { key: 'building3', type: 'image', path: '/assets/images/building3.png' },

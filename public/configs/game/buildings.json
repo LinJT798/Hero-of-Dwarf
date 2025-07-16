@@ -31,12 +31,12 @@
         "type": "arrow",
         "sprite": "arrow",
         "size": {
-          "width": 49,
-          "height": 13
+          "width": 38,
+          "height": 10
         },
         "flightTime": 2000,
         "arcHeightFactor": 0.3,
-        "minArcHeight": 50,
+        "minArcHeight": 100,
         "hitRadius": 50
       },
       "animations": {
