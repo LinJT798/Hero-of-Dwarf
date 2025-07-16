@@ -111,13 +111,13 @@ export class DwarfManager {
             
             console.log(`[DwarfManager] 矮人 ${data.dwarfId} 已从管理器中移除并销毁`);
             
-            // 检查是否需要重新生成矮人
-            if (this.dwarfs.size < this.MAX_DWARFS) {
-                // 延迟生成新矮人，给玩家一些喘息时间
-                this.scene.time.delayedCall(5000, () => {
-                    const spawnPos = this.SPAWN_POSITIONS[this.dwarfs.size];
-                    this.spawnDwarf(spawnPos);
-                });
+            // 不再重新生成矮人
+            console.log(`[DwarfManager] 剩余矮人数量: ${this.dwarfs.size}`);
+            
+            // 如果所有矮人都死亡，可以触发游戏失败事件
+            if (this.dwarfs.size === 0) {
+                console.log('[DwarfManager] 所有矮人都已死亡！');
+                this.scene.events.emit('all-dwarfs-dead');
             }
         }
     }

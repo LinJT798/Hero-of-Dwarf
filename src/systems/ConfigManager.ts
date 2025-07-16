@@ -1,3 +1,9 @@
+import { UnitsConfigFile } from '../types/config/UnitConfig';
+import { BuildingsConfigFile } from '../types/config/BuildingConfig';
+import { WavesConfigFile } from '../types/config/WaveConfig';
+import { ShopConfigFile } from '../types/config/ShopConfig';
+import { WorldConfigFile } from '../types/config/WorldConfig';
+
 /**
  * 简化的配置管理器
  * 用于Demo版本的配置加载和管理
@@ -97,8 +103,10 @@ export class ConfigManager {
      * @param configPaths 配置文件路径数组
      */
     async loadConfigs(configPaths: string[]): Promise<void> {
+        console.log('[ConfigManager] Loading configs:', configPaths);
         const promises = configPaths.map(path => this.loadConfig(path));
         await Promise.all(promises);
+        console.log('[ConfigManager] All configs loaded, available configs:', Array.from(this.configs.keys()));
     }
 
     /**
@@ -123,6 +131,41 @@ export class ConfigManager {
 
     private getConfigName(configPath: string): string {
         return configPath.replace('.json', '').replace(/\//g, '_');
+    }
+
+    /**
+     * 获取单位配置
+     */
+    getUnitsConfig(): UnitsConfigFile | null {
+        return this.getConfig('game_units') as UnitsConfigFile;
+    }
+
+    /**
+     * 获取建筑配置
+     */
+    getBuildingsConfig(): BuildingsConfigFile | null {
+        return this.getConfig('game_buildings') as BuildingsConfigFile;
+    }
+
+    /**
+     * 获取波次配置
+     */
+    getWavesConfig(): WavesConfigFile | null {
+        return this.getConfig('game_waves') as WavesConfigFile;
+    }
+
+    /**
+     * 获取商店配置
+     */
+    getShopConfig(): ShopConfigFile | null {
+        return this.getConfig('game_shop') as ShopConfigFile;
+    }
+
+    /**
+     * 获取世界配置
+     */
+    getWorldConfig(): WorldConfigFile | null {
+        return this.getConfig('game_world') as WorldConfigFile;
     }
 
     private getDefaultConfig(configName: string): any {
@@ -177,6 +220,44 @@ export class ConfigManager {
                         weight: 10
                     }
                 ]
+            },
+            'game_units': {
+                units: {
+                    dwarf: {
+                        displayName: "矮人",
+                        type: "friendly",
+                        combat: { health: 100, maxHealth: 100, attack: 20, range: 50, attackSpeed: 1500, armor: 5 },
+                        movement: { speed: 100, groundY: 789 },
+                        ai: { senseRadius: 120, threatRadius: 80, collectionRange: 50, buildRange: 60, carryCapacity: 5 },
+                        display: { size: 80, healthBar: { width: 60, height: 4, offsetY: -85 } },
+                        animations: { frameRate: 20, types: ["idle", "walk", "build", "attack", "death"] }
+                    }
+                }
+            },
+            'game_buildings': {
+                buildingLayout: {
+                    maxSlots: 8,
+                    positions: { startX: 209, increment: 107, y: 630 },
+                    foundationSize: { width: 162, height: 162 }
+                },
+                buildings: {
+                    arrow_tower: {
+                        displayName: "弓箭塔",
+                        type: "defensive",
+                        size: { width: 162, height: 162 },
+                        combat: { health: 200, maxHealth: 200, attack: 25, range: 500, attackSpeed: 1000, armor: 10 },
+                        buildTime: 5000
+                    }
+                }
+            },
+            'game_waves': {
+                waveSettings: { maxWaves: 5, waveCompleteDelay: 3000, spawnPosition: { x: 1200, y: 789 } },
+                waves: []
+            },
+            'game_world': {
+                ground: { y: 789 },
+                castle: { boundary: { left: -221, right: 239 } },
+                gameArea: { width: 1280, height: 832 }
             }
         };
 

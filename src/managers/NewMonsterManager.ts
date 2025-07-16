@@ -1,5 +1,8 @@
 import { Goblin, GoblinState } from '../entities/Goblin';
 import { CombatUnit } from '../interfaces/CombatUnit';
+import { configManager } from '../systems/ConfigManager';
+import { WaveConfig, MonsterSpawnConfig } from '../types/config/WaveConfig';
+import { UnitFactory } from '../factories/UnitFactory';
 
 /**
  * 新的怪物管理器
@@ -10,32 +13,27 @@ export class NewMonsterManager {
     private container: Phaser.GameObjects.Container;
     private goblins: Map<string, Goblin> = new Map();
     private nextGoblinId = 1;
+    private unitFactory: UnitFactory;
     
     // 波次系统
     private currentWave: number = 1;
-    private maxWaves: number = 5;
+    private maxWaves: number;
     private isWaveActive: boolean = false;
     private waveCompleteTimer: number = 0;
-    private readonly WAVE_COMPLETE_DELAY = 3000; // 3秒延迟
+    private waveCompleteDelay: number;
     
     // 生成配置
-    private readonly SPAWN_X = 1200; // 屏幕右侧
-    private readonly SPAWN_Y = 789;  // 与矮人y轴一致
+    private spawnPosition: { x: number; y: number };
     
     // 波次配置
-    private waveConfigs = [
-        { wave: 1, goblins: 3, spawnInterval: 2000 }, // 第1波：3只哥布林，间隔2秒
-        { wave: 2, goblins: 5, spawnInterval: 1500 }, // 第2波：5只哥布林，间隔1.5秒
-        { wave: 3, goblins: 7, spawnInterval: 1200 }, // 第3波：7只哥布林，间隔1.2秒
-        { wave: 4, goblins: 10, spawnInterval: 1000 }, // 第4波：10只哥布林，间隔1秒
-        { wave: 5, goblins: 15, spawnInterval: 800 }   // 第5波：15只哥布林，间隔0.8秒
-    ];
+    private waveConfigs: WaveConfig[] = [];
     
     // 生成队列
-    private spawnQueue: Array<{ spawnTime: number; goblinIndex: number }> = [];
+    private spawnQueue: Array<{ spawnTime: number; monsterType: string; monsterIndex: number }> = [];
     private spawnTimer: number = 0;
-    private goblinsSpawned: number = 0;
-    private goblinsToSpawn: number = 0;
+    private monstersSpawned: number = 0;
+    private monstersToSpawn: number = 0;
+    private currentWaveConfig: WaveConfig | null = null;
     
     // 目标列表（用于哥布林攻击）
     private targetBuildings: CombatUnit[] = [];
@@ -44,11 +42,55 @@ export class NewMonsterManager {
     constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
         this.scene = scene;
         this.container = container;
+        this.unitFactory = new UnitFactory(scene);
+        
+        // 加载波次配置
+        this.loadWaveConfig();
         
         this.setupEventListeners();
         this.startWave(1);
         
-        console.log('NewMonsterManager initialized');
+        console.log('NewMonsterManager initialized with config');
+    }
+    
+    /**
+     * 加载波次配置
+     */
+    private loadWaveConfig(): void {
+        const wavesConfig = configManager.getWavesConfig();
+        
+        console.log('[NewMonsterManager] Loading wave config:', wavesConfig);
+        
+        if (wavesConfig) {
+            this.maxWaves = wavesConfig.waveSettings.maxWaves;
+            this.waveCompleteDelay = wavesConfig.waveSettings.waveCompleteDelay;
+            this.spawnPosition = { ...wavesConfig.waveSettings.spawnPosition };
+            this.waveConfigs = [...wavesConfig.waves];
+            
+            console.log(`[NewMonsterManager] Wave config loaded: ${this.maxWaves} waves, spawn at (${this.spawnPosition.x}, ${this.spawnPosition.y})`);
+            console.log('[NewMonsterManager] Wave configs:', this.waveConfigs);
+        } else {
+            console.warn('[NewMonsterManager] Wave config not found, using defaults');
+            this.loadDefaultWaveConfig();
+        }
+    }
+    
+    /**
+     * 加载默认波次配置
+     */
+    private loadDefaultWaveConfig(): void {
+        this.maxWaves = 5;
+        this.waveCompleteDelay = 3000;
+        this.spawnPosition = { x: 1200, y: 789 };
+        
+        // 默认波次配置
+        this.waveConfigs = [
+            { waveNumber: 1, monsters: [{ type: 'goblin', count: 3, spawnInterval: 2000 }] },
+            { waveNumber: 2, monsters: [{ type: 'goblin', count: 5, spawnInterval: 1500 }] },
+            { waveNumber: 3, monsters: [{ type: 'goblin', count: 7, spawnInterval: 1200 }] },
+            { waveNumber: 4, monsters: [{ type: 'goblin', count: 10, spawnInterval: 1000 }] },
+            { waveNumber: 5, monsters: [{ type: 'goblin', count: 15, spawnInterval: 800 }] }
+        ];
     }
     
     /**
@@ -79,13 +121,19 @@ export class NewMonsterManager {
     /**
      * 处理城堡攻击事件
      */
-    private handleCastleAttacked(data: { goblin: Goblin }): void {
-        console.log(`Castle attacked by goblin ${data.goblin.id}`);
+    private handleCastleAttacked(data: { goblinId: string; goblinType: string; position: { x: number; y: number } }): void {
+        if (!data || !data.goblinId) {
+            console.error('handleCastleAttacked called with invalid data:', data);
+            return;
+        }
+        
+        console.log(`Castle attacked by ${data.goblinType} ${data.goblinId} at position (${data.position.x}, ${data.position.y})`);
         
         // 触发游戏失败事件
-        this.scene.events.emit('castle-attacked', {
-            attacker: data.goblin,
-            type: 'goblin'
+        this.scene.events.emit('castle-destroyed', {
+            attackerId: data.goblinId,
+            attackerType: data.goblinType,
+            position: data.position
         });
     }
     
@@ -103,48 +151,78 @@ export class NewMonsterManager {
         this.isWaveActive = true;
         this.waveCompleteTimer = 0;
         
-        const config = this.waveConfigs[waveNumber - 1];
-        this.goblinsToSpawn = config.goblins;
-        this.goblinsSpawned = 0;
+        // 找到对应的波次配置
+        this.currentWaveConfig = this.waveConfigs.find(w => w.waveNumber === waveNumber) || null;
+        
+        console.log(`[NewMonsterManager] Starting wave ${waveNumber}, looking for config in:`, this.waveConfigs);
+        console.log(`[NewMonsterManager] Found wave config:`, this.currentWaveConfig);
+        
+        if (!this.currentWaveConfig) {
+            console.error(`Wave config not found for wave ${waveNumber}`);
+            return;
+        }
+        
+        // 计算总怪物数量
+        this.monstersToSpawn = 0;
+        this.currentWaveConfig.monsters.forEach(monsterGroup => {
+            this.monstersToSpawn += monsterGroup.count;
+            console.log(`[NewMonsterManager] Wave ${waveNumber} - ${monsterGroup.type}: ${monsterGroup.count} monsters`);
+        });
+        
+        this.monstersSpawned = 0;
         
         // 准备生成队列
         this.spawnQueue = [];
         this.spawnTimer = 0;
         
-        for (let i = 0; i < config.goblins; i++) {
-            this.spawnQueue.push({
-                spawnTime: i * config.spawnInterval,
-                goblinIndex: i
-            });
-        }
+        let currentTime = 0;
+        this.currentWaveConfig.monsters.forEach(monsterGroup => {
+            for (let i = 0; i < monsterGroup.count; i++) {
+                this.spawnQueue.push({
+                    spawnTime: currentTime,
+                    monsterType: monsterGroup.type,
+                    monsterIndex: i
+                });
+                currentTime += monsterGroup.spawnInterval;
+            }
+        });
         
-        console.log(`Wave ${waveNumber} started: ${config.goblins} goblins, interval: ${config.spawnInterval}ms`);
-        this.scene.events.emit('wave-started', { wave: waveNumber, config });
+        console.log(`Wave ${waveNumber} started: ${this.monstersToSpawn} monsters`);
+        this.scene.events.emit('wave-started', { wave: waveNumber, config: this.currentWaveConfig });
     }
     
     /**
-     * 生成哥布林
+     * 生成怪物
      */
-    private spawnGoblin(): void {
-        const goblinId = `goblin_${this.nextGoblinId++}`;
-        const goblin = new Goblin(this.scene, goblinId, this.SPAWN_X);
+    private spawnMonster(monsterType: string): void {
+        const monsterId = `${monsterType}_${this.nextGoblinId++}`;
+        const monster = this.unitFactory.createUnit(monsterType, monsterId, this.spawnPosition.x);
         
-        // 设置目标列表
-        goblin.setTargets(this.targetBuildings, this.targetDwarfs);
+        if (!monster) {
+            console.error(`Failed to create monster of type: ${monsterType}`);
+            return;
+        }
         
-        // 添加到容器
-        this.container.add(goblin.getSprite());
+        // 如果是哥布林，设置目标列表
+        if (monster instanceof Goblin) {
+            const goblin = monster as Goblin;
+            goblin.setTargets(this.targetBuildings, this.targetDwarfs);
+            
+            // 添加到容器
+            this.container.add(goblin.getSprite());
+            
+            // 添加血条到容器
+            const healthBarObjects = goblin.getHealthBarObjects();
+            healthBarObjects.forEach(obj => {
+                this.container.add(obj);
+            });
+            
+            this.goblins.set(monsterId, goblin);
+        }
         
-        // 添加血条到容器
-        const healthBarObjects = goblin.getHealthBarObjects();
-        healthBarObjects.forEach(obj => {
-            this.container.add(obj);
-        });
+        this.monstersSpawned++;
         
-        this.goblins.set(goblinId, goblin);
-        this.goblinsSpawned++;
-        
-        console.log(`Spawned ${goblinId} for wave ${this.currentWave} (${this.goblinsSpawned}/${this.goblinsToSpawn})`);
+        console.log(`Spawned ${monsterId} for wave ${this.currentWave} (${this.monstersSpawned}/${this.monstersToSpawn})`);
     }
     
     /**
@@ -153,8 +231,8 @@ export class NewMonsterManager {
     private checkWaveComplete(): void {
         if (!this.isWaveActive) return;
         
-        // 检查是否所有哥布林都已生成且死亡/离开
-        const allSpawned = this.goblinsSpawned >= this.goblinsToSpawn;
+        // 检查是否所有怪物都已生成且死亡/离开
+        const allSpawned = this.monstersSpawned >= this.monstersToSpawn;
         const allGone = this.getAliveGoblins().length === 0;
         
         if (allSpawned && allGone) {
@@ -201,10 +279,10 @@ export class NewMonsterManager {
             currentWave: this.currentWave,
             maxWaves: this.maxWaves,
             isWaveActive: this.isWaveActive,
-            goblinsSpawned: this.goblinsSpawned,
-            goblinsToSpawn: this.goblinsToSpawn,
-            aliveGoblins: this.getAliveGoblins().length,
-            totalGoblins: this.goblins.size
+            monstersSpawned: this.monstersSpawned,
+            monstersToSpawn: this.monstersToSpawn,
+            aliveMonsters: this.getAliveGoblins().length,
+            totalMonsters: this.goblins.size
         };
     }
     
@@ -225,10 +303,10 @@ export class NewMonsterManager {
         if (this.isWaveActive && this.spawnQueue.length > 0) {
             this.spawnTimer += delta;
             
-            // 检查是否需要生成哥布林
+            // 检查是否需要生成怪物
             while (this.spawnQueue.length > 0 && this.spawnTimer >= this.spawnQueue[0].spawnTime) {
-                this.spawnQueue.shift();
-                this.spawnGoblin();
+                const spawnInfo = this.spawnQueue.shift()!;
+                this.spawnMonster(spawnInfo.monsterType);
             }
         }
         
@@ -254,7 +332,7 @@ export class NewMonsterManager {
         // 处理波次间隔
         if (!this.isWaveActive && this.currentWave < this.maxWaves) {
             this.waveCompleteTimer += delta;
-            if (this.waveCompleteTimer >= this.WAVE_COMPLETE_DELAY) {
+            if (this.waveCompleteTimer >= this.waveCompleteDelay) {
                 this.startWave(this.currentWave + 1);
             }
         }

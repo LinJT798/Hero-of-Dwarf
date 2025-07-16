@@ -1,5 +1,6 @@
 import { resourceManager } from '../managers/ResourceManager';
 import { configManager } from '../systems/ConfigManager';
+import { BuildingFactory } from '../factories/BuildingFactory';
 
 /**
  * 商店商品接口
@@ -23,19 +24,21 @@ export class Shop {
     private currentProducts: ShopProduct[] = [];
     private productSlots: ShopSlot[] = [];
     private productPool: ShopProduct[] = [];
+    private buildingFactory: BuildingFactory;
     
     // 商店配置 (严格按照Figma设计)
-    private readonly SLOT_COUNT = 2;
-    private readonly SLOT_WIDTH = 190; // Figma: 190×96px
-    private readonly SLOT_HEIGHT = 96;
-    private readonly SLOT_POSITIONS = [
-        { x: 115, y: 81 },   // Figma位置1: (115, 81)
-        { x: 115, y: 204 }   // Figma位置2: (115, 204)
-    ];
+    private slotCount: number = 2;
+    private slotWidth: number = 190; // Figma: 190×96px
+    private slotHeight: number = 96;
+    private slotPositions: Array<{ x: number; y: number }> = [];
+    private iconSize: { width: number; height: number } = { width: 85, height: 85 };
+    private resourceIconSize: { width: number; height: number } = { width: 22, height: 22 };
+    private priceTextSize: number = 24;
 
     constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
         this.scene = scene;
         this.container = container;
+        this.buildingFactory = new BuildingFactory(scene);
         
         this.initialize();
     }
@@ -57,7 +60,39 @@ export class Shop {
     private async loadShopConfig(): Promise<void> {
         try {
             const config = await configManager.loadConfig('game/shop.json');
+            
+            // 加载布局配置
+            if (config.shopLayout) {
+                const layout = config.shopLayout;
+                this.slotPositions = layout.slots || [
+                    { x: 115, y: 81 },
+                    { x: 115, y: 204 }
+                ];
+                this.slotCount = Math.min(this.slotPositions.length, config.shop_settings?.slot_count || 2);
+                this.iconSize = layout.iconSize || { width: 85, height: 85 };
+                this.resourceIconSize = layout.resourceIconSize || { width: 22, height: 22 };
+                this.priceTextSize = layout.priceTextSize || 24;
+            } else {
+                // 使用默认Figma位置
+                this.slotPositions = [
+                    { x: 115, y: 81 },
+                    { x: 115, y: 204 }
+                ];
+            }
+            
+            // 加载商品配置
             this.productPool = config.products || [];
+            
+            // 为每个商品添加实际的建筑配置信息
+            this.productPool = this.productPool.map(product => {
+                const buildingConfig = this.buildingFactory.getBuildingConfig(product.buildingType || product.type);
+                if (buildingConfig) {
+                    // 使用建筑配置中的显示名称
+                    product.name = buildingConfig.displayName;
+                }
+                return product;
+            });
+            
         } catch (error) {
             console.warn('Failed to load shop config, using defaults');
             this.productPool = this.getDefaultProducts();
@@ -102,14 +137,17 @@ export class Shop {
     private createProductSlots(): void {
         this.productSlots = [];
         
-        for (let i = 0; i < this.SLOT_COUNT; i++) {
+        for (let i = 0; i < this.slotCount; i++) {
             const slot = new ShopSlot(
                 this.scene,
-                this.SLOT_POSITIONS[i].x,
-                this.SLOT_POSITIONS[i].y,
-                this.SLOT_WIDTH,
-                this.SLOT_HEIGHT,
-                i
+                this.slotPositions[i].x,
+                this.slotPositions[i].y,
+                this.slotWidth,
+                this.slotHeight,
+                i,
+                this.iconSize,
+                this.resourceIconSize,
+                this.priceTextSize
             );
             
             // 设置购买回调
@@ -130,7 +168,7 @@ export class Shop {
         const selectedProducts = this.selectRandomProducts();
         
         // 更新槽位显示
-        for (let i = 0; i < this.SLOT_COUNT; i++) {
+        for (let i = 0; i < this.slotCount; i++) {
             const product = selectedProducts[i] || null;
             this.productSlots[i].setProduct(product);
         }
@@ -147,7 +185,7 @@ export class Shop {
         const selected: ShopProduct[] = [];
         
         // 使用权重随机选择
-        for (let i = 0; i < this.SLOT_COUNT && availableProducts.length > 0; i++) {
+        for (let i = 0; i < this.slotCount && availableProducts.length > 0; i++) {
             const randomProduct = this.selectWeightedRandom(availableProducts);
             if (randomProduct) {
                 selected.push({ ...randomProduct }); // 创建副本
@@ -275,7 +313,7 @@ class ShopSlot {
     
     private container: Phaser.GameObjects.Container;
     private background: Phaser.GameObjects.Rectangle;
-    private icon: Phaser.GameObjects.Rectangle;
+    private icon: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle | null = null;
     private nameText: Phaser.GameObjects.Text;
     private costText: Phaser.GameObjects.Text;
     private purchasedOverlay: Phaser.GameObjects.Rectangle | null = null;
@@ -288,14 +326,32 @@ class ShopSlot {
     public onPurchase: ((slotIndex: number) => void) | null = null;
     
     private currentProduct: ShopProduct | null = null;
+    
+    // 配置尺寸
+    private iconSize: { width: number; height: number };
+    private resourceIconSize: { width: number; height: number };
+    private priceTextSize: number;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, width: number, height: number, slotIndex: number) {
+    constructor(
+        scene: Phaser.Scene, 
+        x: number, 
+        y: number, 
+        width: number, 
+        height: number, 
+        slotIndex: number,
+        iconSize: { width: number; height: number } = { width: 85, height: 85 },
+        resourceIconSize: { width: number; height: number } = { width: 22, height: 22 },
+        priceTextSize: number = 24
+    ) {
         this.scene = scene;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.slotIndex = slotIndex;
+        this.iconSize = iconSize;
+        this.resourceIconSize = resourceIconSize;
+        this.priceTextSize = priceTextSize;
         
         this.createDisplay();
     }
@@ -318,14 +374,8 @@ class ShopSlot {
         this.container.add(this.background);
         
         // archer_icon (Figma: 85×85px) - 左侧居中
-        this.icon = this.scene.add.image(
-            this.x + 10, 
-            this.y + 5, 
-            'archer_icon'
-        );
-        this.icon.setOrigin(0, 0);
-        this.icon.setDisplaySize(85, 85);
-        this.container.add(this.icon);
+        // 不创建灰色占位符，等待实际图标
+        // this.icon 将在 setProduct 时创建
         
         // 删除商品名称文本 - Figma中没有
         this.nameText = this.scene.add.text(0, 0, '', { fontSize: '1px' });
@@ -368,11 +418,46 @@ class ShopSlot {
         this.clearResourceDisplay();
         
         if (product) {
-            this.icon.setVisible(true);
+            // 尝试加载建筑图标
+            // 特殊处理：arrow_tower 使用 archer_icon
+            let textureKey = product.type === 'arrow_tower' ? 'archer_icon' : `${product.type}_icon`;
+            
+            console.log(`[ShopSlot] Setting product ${product.type}, looking for texture: ${textureKey}`);
+            console.log(`[ShopSlot] Texture exists: ${this.scene.textures.exists(textureKey)}`);
+            
+            // 计算图标位置
+            const iconX = this.x + 10;
+            const iconY = this.y + 5;
+            
+            // 如果已有图标，先销毁
+            if (this.icon) {
+                this.icon.destroy();
+                this.icon = null;
+            }
+            
+            if (this.scene.textures.exists(textureKey)) {
+                // 创建图标图像
+                this.icon = this.scene.add.image(iconX, iconY, textureKey);
+                this.icon.setOrigin(0, 0);
+                this.icon.setDisplaySize(this.iconSize.width, this.iconSize.height);
+                this.container.add(this.icon);
+                console.log(`[ShopSlot] Icon created successfully at (${iconX}, ${iconY})`);
+            } else {
+                console.warn(`[ShopSlot] Texture ${textureKey} not found, no icon will be displayed`);
+                // 可以选择创建一个占位符或留空
+                // this.icon = this.scene.add.rectangle(iconX, iconY, this.iconSize.width, this.iconSize.height, 0xCCCCCC);
+                // this.icon.setOrigin(0, 0);
+                // this.container.add(this.icon);
+            }
+            
             this.createResourceDisplay(product.cost);
             this.setPurchased(product.purchased);
         } else {
-            this.icon.setVisible(false);
+            // 如果没有商品，隐藏或销毁图标
+            if (this.icon) {
+                this.icon.destroy();
+                this.icon = null;
+            }
             this.setPurchased(false);
         }
     }
@@ -399,19 +484,23 @@ class ShopSlot {
             const iconX = this.x + 105;
             const iconY = this.y + 15 + index * 25; // 垂直间距25px
             
-            // 创建资源图标 (使用原始资源缩放到22×22px)
+            // 创建资源图标 (使用原始资源缩放到配置尺寸)
             const resourceIcon = this.scene.add.image(iconX, iconY, this.getResourceImageKey(resourceType));
             resourceIcon.setOrigin(0, 0);
-            resourceIcon.setDisplaySize(22, resourceType === 'stone' ? 21 : 22); // stone_store是22×21px
+            resourceIcon.setDisplaySize(
+                this.resourceIconSize.width, 
+                resourceType === 'stone' ? this.resourceIconSize.height - 1 : this.resourceIconSize.height
+            );
             this.resourceIcons.push(resourceIcon);
             this.container.add(resourceIcon);
             
-            // 价格文本 (Figma: 27×22px, 24px字体) - 在图标右侧
+            // 价格文本 - 在图标右侧
             const priceText = this.scene.add.text(
-                iconX + 25, iconY + 11,
+                iconX + this.resourceIconSize.width + 3, 
+                iconY + this.resourceIconSize.height / 2,
                 amount.toString(),
                 {
-                    fontSize: '24px',
+                    fontSize: `${this.priceTextSize}px`,
                     color: '#000000',
                     fontFamily: 'Abyssinica SIL'
                 }

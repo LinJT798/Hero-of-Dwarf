@@ -1,0 +1,23 @@
+{
+  "ground": {
+    "y": 789
+  },
+  "castle": {
+    "boundary": {
+      "left": -221,
+      "right": 239
+    },
+    "position": {
+      "x": -221,
+      "y": 405
+    },
+    "size": {
+      "width": 460,
+      "height": 384
+    }
+  },
+  "gameArea": {
+    "width": 1280,
+    "height": 832
+  }
+}

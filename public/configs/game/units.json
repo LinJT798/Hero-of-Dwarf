@@ -1,0 +1,86 @@
+{
+  "units": {
+    "dwarf": {
+      "displayName": "矮人",
+      "type": "friendly",
+      "combat": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 20,
+        "range": 50,
+        "attackSpeed": 1500,
+        "armor": 5
+      },
+      "movement": {
+        "speed": 100,
+        "groundY": 789
+      },
+      "ai": {
+        "senseRadius": 120,
+        "threatRadius": 80,
+        "collectionRange": 50,
+        "buildRange": 60,
+        "carryCapacity": 5,
+        "castleBoundary": {
+          "left": -221,
+          "right": 239
+        }
+      },
+      "idle": {
+        "animationChance": 0.33,
+        "moveChance": 0.33,
+        "staticDurationMin": 2000,
+        "staticDurationMax": 4000
+      },
+      "display": {
+        "size": 80,
+        "healthBar": {
+          "width": 60,
+          "height": 4,
+          "offsetY": -85
+        }
+      },
+      "animations": {
+        "frameRate": 20,
+        "types": ["idle", "walk", "build", "attack", "death"]
+      }
+    },
+    "goblin": {
+      "displayName": "哥布林",
+      "type": "enemy",
+      "combat": {
+        "health": 100,
+        "maxHealth": 100,
+        "attack": 20,
+        "range": 50,
+        "attackSpeed": 1500,
+        "armor": 5
+      },
+      "movement": {
+        "speed": 50,
+        "groundY": 789
+      },
+      "ai": {
+        "deathDuration": 20000,
+        "targetPriority": ["building", "dwarf"]
+      },
+      "display": {
+        "size": 79,
+        "flipX": true,
+        "healthBar": {
+          "width": 60,
+          "height": 4,
+          "offsetY": -85
+        }
+      },
+      "animations": {
+        "frameRate": 20,
+        "types": ["walk", "attack", "death"]
+      },
+      "rewards": {
+        "killPoints": 10,
+        "resources": {}
+      }
+    }
+  }
+}

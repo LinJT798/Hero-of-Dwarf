@@ -1,0 +1,59 @@
+{
+  "buildingLayout": {
+    "maxSlots": 8,
+    "positions": {
+      "startX": 209,
+      "increment": 107,
+      "y": 630
+    },
+    "foundationSize": {
+      "width": 162,
+      "height": 162
+    }
+  },
+  "buildings": {
+    "arrow_tower": {
+      "displayName": "弓箭塔",
+      "type": "defensive",
+      "size": {
+        "width": 162,
+        "height": 162
+      },
+      "combat": {
+        "health": 200,
+        "maxHealth": 200,
+        "attack": 25,
+        "range": 800,
+        "attackSpeed": 2500,
+        "armor": 10
+      },
+      "projectile": {
+        "type": "arrow",
+        "sprite": "arrow",
+        "size": {
+          "width": 49,
+          "height": 13
+        },
+        "flightTime": 2000,
+        "arcHeightFactor": 0.3,
+        "minArcHeight": 50,
+        "hitRadius": 50
+      },
+      "animations": {
+        "frameRate": 20,
+        "idle": {
+          "enabled": true,
+          "chance": 0.5,
+          "frames": 101,
+          "staticDurationMin": 2000,
+          "staticDurationMax": 4000
+        }
+      },
+      "buildTime": 5000,
+      "cost": {
+        "gold": 100,
+        "wood": 50
+      }
+    }
+  }
+}

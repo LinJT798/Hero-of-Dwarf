@@ -102,11 +102,11 @@ export class MainGameScene extends Scene {
         // 不显示加载进度
     }
 
-    create() {
+    async create() {
         console.log('MainGameScene created');
         
-        // 初始化配置
-        this.initializeConfigs();
+        // 初始化配置（等待完成）
+        await this.initializeConfigs();
         
         // 创建背景
         this.createBackground();
@@ -137,7 +137,11 @@ export class MainGameScene extends Scene {
                 'game/match3.json',
                 'game/tower.json',
                 'game/monster.json',
-                'game/shop.json'
+                'game/shop.json',
+                'game/units.json',
+                'game/buildings.json',
+                'game/waves.json',
+                'game/world.json'
             ]);
             console.log('Configs loaded successfully');
         } catch (error) {

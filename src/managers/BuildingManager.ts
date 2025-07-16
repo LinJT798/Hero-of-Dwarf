@@ -1,5 +1,8 @@
 import { BuildingConstruction } from '../entities/BuildingConstruction';
 import { CombatUnit, CombatAttributes, CombatUtils } from '../interfaces/CombatUnit';
+import { configManager } from '../systems/ConfigManager';
+import { BuildingConfig } from '../types/config/BuildingConfig';
+import { BuildingFactory } from '../factories/BuildingFactory';
 
 /**
  * 建筑管理器
@@ -11,6 +14,7 @@ export class BuildingManager {
     private buildings: Map<string, Building> = new Map();
     private buildingPositions: BuildingPosition[] = [];
     private nextBuildingId = 1;
+    private buildingFactory: BuildingFactory;
     
     // 地基管理
     private foundations: Map<string, Phaser.GameObjects.Image> = new Map();
@@ -22,39 +26,52 @@ export class BuildingManager {
     constructor(scene: Phaser.Scene, container: Phaser.GameObjects.Container) {
         this.scene = scene;
         this.container = container;
+        this.buildingFactory = new BuildingFactory(scene);
         
         this.initializeBuildingPositions();
         this.setupEventListeners();
     }
 
     /**
-     * 初始化建筑位置 (8个建筑栏位，从左到右排列)
-     * 第一个x=209，后续每个+107，一共8个
+     * 初始化建筑位置
      */
     private initializeBuildingPositions(): void {
-        const startX = 209;
-        const xIncrement = 107;
-        const buildingY = 630; // 建筑y坐标
+        const layoutConfig = this.buildingFactory.getBuildingLayoutConfig();
         
-        const buildingPositions = [];
-        for (let i = 0; i < 8; i++) {
-            buildingPositions.push({
-                x: startX + (i * xIncrement),
-                y: buildingY
-            });
+        if (!layoutConfig) {
+            console.warn('Building layout config not found, using defaults');
+            // 使用默认值
+            const startX = 209;
+            const xIncrement = 107;
+            const buildingY = 630;
+            const maxSlots = 8;
+            
+            for (let i = 0; i < maxSlots; i++) {
+                this.buildingPositions.push({
+                    id: i,
+                    x: startX + (i * xIncrement),
+                    y: buildingY,
+                    occupied: false,
+                    buildingId: null
+                });
+            }
+        } else {
+            // 使用配置值
+            const { startX, increment, y } = layoutConfig.positions;
+            const maxSlots = layoutConfig.maxSlots;
+            
+            for (let i = 0; i < maxSlots; i++) {
+                this.buildingPositions.push({
+                    id: i,
+                    x: startX + (i * increment),
+                    y: y,
+                    occupied: false,
+                    buildingId: null
+                });
+            }
         }
 
-        buildingPositions.forEach((pos, i) => {
-            this.buildingPositions.push({
-                id: i,
-                x: pos.x,
-                y: pos.y,
-                occupied: false,
-                buildingId: null
-            });
-        });
-
-        console.log(`Initialized ${buildingPositions.length} building positions: x从${startX}开始，每个+${xIncrement}`);
+        console.log(`Initialized ${this.buildingPositions.length} building positions`);
     }
 
     /**
@@ -189,9 +206,12 @@ export class BuildingManager {
      * 创建地基
      */
     private createFoundation(data: { productType: string; productName: string }, position: BuildingPosition): void {
+        const layoutConfig = this.buildingFactory.getBuildingLayoutConfig();
+        const foundationSize = layoutConfig?.foundationSize || { width: 162, height: 162 };
+        
         const foundation = this.scene.add.image(position.x, position.y, 'foundation');
         foundation.setOrigin(0, 0); // 与建筑一致，左上角对齐
-        foundation.setDisplaySize(162, 162); // 与弓箭塔建筑一样的大小
+        foundation.setDisplaySize(foundationSize.width, foundationSize.height);
         
         this.container.add(foundation);
         this.foundations.set(`${position.x}_${position.y}`, foundation);
@@ -382,14 +402,7 @@ class Building implements CombatUnit {
     private isDestroyed: boolean = false;
     
     // 战斗属性
-    private combatAttributes: CombatAttributes = {
-        health: 200,
-        maxHealth: 200,
-        attack: 25,
-        range: 500,        // 攻击范围设置为500像素
-        attackSpeed: 1000, // 1秒攻击间隔
-        armor: 10
-    };
+    private combatAttributes: CombatAttributes;
     
     // 攻击系统
     private lastAttackTime: number = 0;
@@ -399,8 +412,15 @@ class Building implements CombatUnit {
     private isPlayingIdleAnimation: boolean = false;
     private idleAnimationTimer: number = 0;
     private idleStaticDuration: number = 0; // 静止状态的持续时间
-    private readonly IDLE_ANIMATION_CHANCE = 0.5; // 50%的概率播放idle动画
+    private idleAnimationChance: number;
+    private idleStaticDurationMin: number;
+    private idleStaticDurationMax: number;
     private idleAnimationDecided: boolean = false; // 是否已经决定了当前的idle行为
+    
+    // 建筑配置
+    private buildingConfig: BuildingConfig | null = null;
+    private buildingSize: { width: number; height: number };
+    private projectileConfig: any = null;
 
     constructor(scene: Phaser.Scene, id: string, buildingType: string, productId: string, x: number, y: number) {
         this.scene = scene;
@@ -410,31 +430,34 @@ class Building implements CombatUnit {
         this.x = x;
         this.y = y;
         
-        this.createSprite();
+        // 先加载配置
         this.loadBuildingConfig();
+        
+        this.createSprite();
     }
 
     /**
      * 创建精灵 (使用Figma图片)
      */
     private createSprite(): void {
-        // 弓箭塔主体 (使用Figma图片: archer_building 162×162px)
-        const buildingSize = this.buildingType === 'arrow_tower' ? 162 : 60;
+        // 使用配置的建筑尺寸
+        const buildingWidth = this.buildingSize?.width || 162;
+        const buildingHeight = this.buildingSize?.height || 162;
         
-        // 使用实际的弓箭塔图像 (Figma: archer_building 162×162px)
+        // 使用实际的建筑图像
         if (this.buildingType === 'arrow_tower') {
             // 使用Sprite以支持动画
             this.sprite = this.scene.add.sprite(this.x, this.y, 'archer_building');
             this.sprite.setOrigin(0, 0);
-            this.sprite.setDisplaySize(buildingSize, buildingSize);
+            this.sprite.setDisplaySize(buildingWidth, buildingHeight);
             
             // 创建idle动画
             this.createIdleAnimation();
         } else {
-            // 其他建筑类型使用矩形
+            // 其他建筑类型使用矩形（未来可以添加更多建筑图像）
             this.sprite = this.scene.add.rectangle(
                 this.x, this.y, 
-                buildingSize, buildingSize, 
+                buildingWidth, buildingHeight, 
                 0x654321
             );
             this.sprite.setOrigin(0, 0);
@@ -451,14 +474,58 @@ class Building implements CombatUnit {
     /**
      * 加载建筑配置
      */
-    private async loadBuildingConfig(): Promise<void> {
-        try {
-            // 这里可以加载建筑的具体配置
-            // 暂时使用默认值
-            // 战斗属性已在combatAttributes中设置
-        } catch (error) {
-            console.warn('Failed to load building config');
+    private loadBuildingConfig(): void {
+        const buildingsConfig = configManager.getBuildingsConfig();
+        const factory = new BuildingFactory(this.scene);
+        
+        if (buildingsConfig && buildingsConfig.buildings[this.buildingType]) {
+            this.buildingConfig = buildingsConfig.buildings[this.buildingType];
+            
+            // 战斗属性
+            this.combatAttributes = { ...this.buildingConfig.combat };
+            
+            // 建筑尺寸
+            this.buildingSize = { ...this.buildingConfig.size };
+            
+            // 投射物配置
+            this.projectileConfig = this.buildingConfig.projectile || null;
+            
+            // Idle动画配置
+            if (this.buildingConfig.animations?.idle) {
+                const idleConfig = this.buildingConfig.animations.idle;
+                this.idleAnimationChance = idleConfig.chance;
+                this.idleStaticDurationMin = idleConfig.staticDurationMin;
+                this.idleStaticDurationMax = idleConfig.staticDurationMax;
+            } else {
+                this.idleAnimationChance = 0.5;
+                this.idleStaticDurationMin = 2000;
+                this.idleStaticDurationMax = 4000;
+            }
+            
+            console.log(`Building config loaded for ${this.buildingType}: health=${this.combatAttributes.health}, range=${this.combatAttributes.range}`);
+        } else {
+            console.warn(`Building config not found for type: ${this.buildingType}, using defaults`);
+            this.loadDefaultConfig();
         }
+    }
+    
+    /**
+     * 加载默认配置
+     */
+    private loadDefaultConfig(): void {
+        this.combatAttributes = {
+            health: 200,
+            maxHealth: 200,
+            attack: 25,
+            range: 500,
+            attackSpeed: 1000,
+            armor: 10
+        };
+        
+        this.buildingSize = { width: 162, height: 162 };
+        this.idleAnimationChance = 0.5;
+        this.idleStaticDurationMin = 2000;
+        this.idleStaticDurationMax = 4000;
     }
 
     /**
@@ -556,12 +623,12 @@ class Building implements CombatUnit {
         this.idleAnimationDecided = true;
         
         // 随机决定是播放动画还是静止
-        if (Math.random() < this.IDLE_ANIMATION_CHANCE) {
+        if (Math.random() < this.idleAnimationChance) {
             // 播放动画
             this.startIdleAnimation();
         } else {
-            // 静止2-4秒
-            this.idleStaticDuration = 2000 + Math.random() * 2000; // 2-4秒
+            // 静止时间从配置读取
+            this.idleStaticDuration = this.idleStaticDurationMin + Math.random() * (this.idleStaticDurationMax - this.idleStaticDurationMin);
             this.idleAnimationTimer = 0;
             this.isPlayingIdleAnimation = false;
             console.log(`Building ${this.id} will stay static for ${(this.idleStaticDuration/1000).toFixed(1)}s`);
@@ -768,9 +835,10 @@ class Building implements CombatUnit {
         let arrow: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle;
         
         if (this.scene.textures.exists('arrow')) {
-            // 使用箭矢图片，确保尺寸为49x13像素
+            // 使用箭矢图片，从配置读取尺寸
             arrow = this.scene.add.image(arrowStartX, arrowStartY, 'arrow');
-            arrow.setDisplaySize(49, 13);
+            const projectileSize = this.projectileConfig?.size || { width: 49, height: 13 };
+            arrow.setDisplaySize(projectileSize.width, projectileSize.height);
             arrow.setOrigin(0.5, 0.5);
             
             // 初始角度设为0，后续会在抛物线动画中动态调整
@@ -782,14 +850,15 @@ class Building implements CombatUnit {
         }
         
         // 计算抛物线飞行参数
+        const flightTime = this.projectileConfig?.flightTime || 1600;
         const flightData = this.calculateParabolicFlight(
             { x: arrowStartX, y: arrowStartY },
             target,
-            1600 // 飞行时间：1600毫秒（放慢一倍）
+            flightTime
         );
         
         // 创建抛物线飞行动画
-        this.createParabolicAnimation(arrow, flightData, target);
+        this.createParabolicAnimation(arrow, flightData, target, flightTime);
     }
     
     /**
@@ -805,7 +874,9 @@ class Building implements CombatUnit {
         
         // 计算抛物线的最高点
         const distance = CombatUtils.getDistance(startPos, targetPos);
-        const arcHeight = Math.max(50, distance * 0.3); // 弧高至少50像素，或距离的30%
+        const arcHeightFactor = this.projectileConfig?.arcHeightFactor || 0.3;
+        const minArcHeight = this.projectileConfig?.minArcHeight || 50;
+        const arcHeight = Math.max(minArcHeight, distance * arcHeightFactor);
         
         return {
             targetPos,
@@ -847,7 +918,8 @@ class Building implements CombatUnit {
     private createParabolicAnimation(
         arrow: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle,
         flightData: { targetPos: { x: number; y: number }; arcHeight: number },
-        target: CombatUnit
+        target: CombatUnit,
+        flightTime: number = 1600
     ): void {
         const startPos = { x: arrow.x, y: arrow.y };
         const { targetPos, arcHeight } = flightData;
@@ -871,7 +943,7 @@ class Building implements CombatUnit {
         const tween = this.scene.tweens.add({
             targets: { progress: 0 },
             progress: 1,
-            duration: 1600, // 飞行时间1600毫秒（放慢一倍）
+            duration: flightTime, // 飞行时间从配置读取
             ease: 'Sine.easeInOut', // 加减速效果
             onUpdate: (tween) => {
                 t = tween.getValue();
@@ -900,8 +972,9 @@ class Building implements CombatUnit {
                         finalTargetPos
                     );
                     
-                    // 如果箭矢落点在目标附近（50像素范围内），则命中
-                    if (hitDistance <= 50) {
+                    // 如果箭矢落点在目标附近，则命中
+                    const hitRadius = this.projectileConfig?.hitRadius || 50;
+                    if (hitDistance <= hitRadius) {
                         // 创建命中特效
                         const hitEffect = this.scene.add.rectangle(
                             finalTargetPos.x, finalTargetPos.y, 
@@ -966,12 +1039,13 @@ class Building implements CombatUnit {
     }
     
     public getCollisionBounds(): { x: number; y: number; width: number; height: number } {
-        const size = this.buildingType === 'arrow_tower' ? 162 : 60;
+        const width = this.buildingSize?.width || 162;
+        const height = this.buildingSize?.height || 162;
         return {
             x: this.x,
             y: this.y,
-            width: size,
-            height: size
+            width: width,
+            height: height
         };
     }
 

@@ -161,6 +161,53 @@ export class AssetManager {
     }
 
     /**
+     * 动态加载建筑图标
+     * 基于配置文件中的建筑类型
+     */
+    async loadBuildingIcons(): Promise<void> {
+        const buildingIcons: AssetConfig[] = [];
+        
+        // 尝试从 ConfigManager 获取配置
+        try {
+            // 首先尝试从已加载的配置中获取
+            const configManager = (window as any).configManager;
+            let buildingsConfig = null;
+            
+            if (configManager && typeof configManager.getBuildingsConfig === 'function') {
+                buildingsConfig = configManager.getBuildingsConfig();
+            }
+            
+            // 如果配置管理器中没有，尝试直接加载
+            if (!buildingsConfig) {
+                buildingsConfig = await fetch('/configs/game/buildings.json').then(res => res.json());
+            }
+            
+            if (buildingsConfig && buildingsConfig.buildings) {
+                Object.keys(buildingsConfig.buildings).forEach(buildingType => {
+                    // 特殊处理：arrow_tower 使用 archer_icon
+                    const iconKey = buildingType === 'arrow_tower' ? 'archer_icon' : `${buildingType}_icon`;
+                    const iconPath = `/assets/images/${iconKey}.png`;
+                    
+                    if (!this.isAssetLoaded(iconKey)) {
+                        buildingIcons.push({
+                            key: iconKey,
+                            type: 'image',
+                            path: iconPath
+                        });
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Failed to load building types from config for icons:', error);
+        }
+        
+        // 加载找到的图标
+        if (buildingIcons.length > 0) {
+            await this.loadAssets(buildingIcons);
+        }
+    }
+
+    /**
      * 预加载Figma图片资源
      */
     async loadBaseAssets(): Promise<void> {
@@ -252,6 +299,9 @@ export class AssetManager {
         try {
             await this.loadAssets(figmaAssets);
             console.log('Figma assets loaded successfully');
+            
+            // 动态加载建筑图标
+            await this.loadBuildingIcons();
         } catch (error) {
             console.warn('Failed to load some Figma assets, creating fallback textures:', error);
             this.createDemoTextures();

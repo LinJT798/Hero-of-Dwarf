@@ -88,7 +88,7 @@ The game follows a resource generation → collection → building → defense c
 
 **Configuration System**:
 - JSON-driven balance in `public/configs/game/`
-- Access pattern: `configManager.getConfigValue('game_tower.arrow_tower.damage')`
+- Factory pattern for dynamic entity creation
 - Hot-reload requires page refresh
 
 ## Key Implementation Constraints
@@ -122,3 +122,39 @@ The game follows a resource generation → collection → building → defense c
 - Asset loading: Critical assets preloaded, non-core loaded dynamically
 - Animation naming: Sequential frames (e.g., `frame_001.png`)
 - Resource naming: Lowercase with underscores
+
+## Configuration System Details
+
+The game uses a comprehensive JSON-based configuration system for easy balancing and content expansion:
+
+### Configuration Files
+- `public/configs/game/units.json` - NPC attributes (health, speed, combat stats)
+- `public/configs/game/buildings.json` - Building types and their properties
+- `public/configs/game/waves.json` - Monster wave patterns and timing
+- `public/configs/game/shop.json` - Shop products and layout
+- `public/configs/game/world.json` - Global game constants
+- `public/configs/game/match3.json` - Match-3 grid configuration
+- `public/configs/game/tower.json` - Tower-specific settings (legacy)
+- `public/configs/game/monster.json` - Monster configuration (legacy)
+
+### Adding New Content
+1. **New Building Type**: Add entry to `buildings.json`, place icon at `/assets/images/{type}_icon.png`
+2. **New Unit Type**: Add entry to `units.json`, implement unit class extending CombatUnit
+3. **New Wave Pattern**: Modify `waves.json` with spawn counts and intervals
+4. **Shop Products**: Update `shop.json` products array with building references
+
+### Factory Pattern Architecture
+- `UnitFactory`: Creates units dynamically from configuration
+- `BuildingFactory`: Instantiates buildings with config-driven attributes
+- Both factories cache configurations for performance
+
+### Configuration Access
+```typescript
+// Get specific config
+const unitsConfig = configManager.getUnitsConfig();
+const buildingConfig = buildingFactory.getBuildingConfig('arrow_tower');
+
+// Access nested values
+const dwarfSpeed = unitsConfig.units.dwarf.movement.speed;
+const towerDamage = buildingConfig.combat.attack;
+```

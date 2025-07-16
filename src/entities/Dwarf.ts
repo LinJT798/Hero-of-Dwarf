@@ -1,6 +1,8 @@
 import { resourceManager } from '../managers/ResourceManager';
 import { WorldTaskManager } from '../managers/WorldTaskManager';
 import { CombatUnit, CombatAttributes, CombatUtils } from '../interfaces/CombatUnit';
+import { configManager } from '../systems/ConfigManager';
+import { UnitConfig } from '../types/config/UnitConfig';
 
 /**
  * 矮人NPC实体 - 全新状态机架构
@@ -19,8 +21,8 @@ export class Dwarf implements CombatUnit {
     private targetX: number = 0;
     private targetY: number = 0;
     private isMoving: boolean = false;
-    private moveSpeed: number = 100; // 像素/秒
-    private readonly GROUND_Y = 789; // 地面Y坐标（land的上边界）
+    private moveSpeed: number;
+    private groundY: number;
     
     // 待机动画系统
     private currentIdleSet: number = 1; // 当前使用的待机动画套装 (1 或 2)
@@ -28,9 +30,10 @@ export class Dwarf implements CombatUnit {
     private idleStaticDuration: number = 0; // 静止状态的持续时间
     private isPlayingIdleAnimation: boolean = false; // 是否正在播放idle动画
     private idleAnimationDecided: boolean = false; // 是否已经决定了当前的idle行为
-    private readonly IDLE_ANIMATION_CHANCE = 0.33; // 33%的概率播放idle动画
-    private readonly IDLE_MOVE_CHANCE = 0.33; // 33%的概率移动
-    // 剩余33%的概率静止
+    private idleAnimationChance: number;
+    private idleMoveChance: number;
+    private idleStaticDurationMin: number;
+    private idleStaticDurationMax: number;
     
     // 待机行为类型
     private currentIdleBehavior: 'static' | 'move' | 'animation' | 'none' = 'none';
@@ -48,44 +51,140 @@ export class Dwarf implements CombatUnit {
     private sensedMonsters: any[] = [];
     private lastPerceptionUpdate: number = 0;
     
-    // 战斗属性（与哥布林数值一致）
-    private combatAttributes: CombatAttributes = {
-        health: 100,
-        maxHealth: 100,
-        attack: 20,
-        range: 50,
-        attackSpeed: 1500, // 1.5秒攻击间隔
-        armor: 5
-    };
+    // 战斗属性
+    private combatAttributes: CombatAttributes;
     
     // 战斗相关
     private attackTimer: number = 0;
     
     // 配置参数
-    private readonly DWARF_SIZE = 80;
-    private readonly R_SENSE = 120; // 感知半径
-    private readonly R_MONSTER_THREAT = 80; // 战斗触发距离
-    private readonly CARRY_CAPACITY = 5;
-    private readonly COLLECTION_RANGE = 50;
-    private readonly BUILD_RANGE = 60;
-    private readonly CASTLE_X_START = -221; // 城堡左边界
-    private readonly CASTLE_X_END = 239; // 城堡右边界 (-221 + 460)
+    private dwarfSize: number;
+    private senseRadius: number;
+    private threatRadius: number;
+    private carryCapacity: number;
+    private collectionRange: number;
+    private buildRange: number;
+    private castleXStart: number;
+    private castleXEnd: number;
+    
+    // 单位配置
+    private unitConfig: UnitConfig | null = null;
     
     // 随机移动（空闲状态）
     private idleTimer: number = 0;
     private nextIdleMove: number = 8000;
+    
+    // 销毁标志
+    private isDestroyed: boolean = false;
 
     constructor(scene: Phaser.Scene, id: string, x: number, y: number) {
         this.scene = scene;
         this.id = id;
         this.x = x;
-        this.y = this.GROUND_Y; // 始终保持在地面上
+        
+        // 加载配置
+        this.loadConfig();
+        
+        // 设置Y坐标为配置中的地面高度
+        this.y = this.groundY;
         
         this.createSprite();
         this.createHealthBar();
         this.setupEventListeners();
         
-        console.log(`Dwarf ${this.id} created at (${x}, ${y}) with new state machine`);
+        console.log(`Dwarf ${this.id} created at (${x}, ${y}) with config-based attributes`);
+    }
+    
+    /**
+     * 从配置加载矮人属性
+     */
+    private loadConfig(): void {
+        const unitsConfig = configManager.getUnitsConfig();
+        const worldConfig = configManager.getWorldConfig();
+        
+        console.log(`[Dwarf] Loading config, unitsConfig:`, unitsConfig);
+        
+        if (unitsConfig && unitsConfig.units && unitsConfig.units.dwarf) {
+            this.unitConfig = unitsConfig.units.dwarf;
+            
+            // 战斗属性
+            this.combatAttributes = { ...this.unitConfig.combat };
+            
+            // 移动属性
+            this.moveSpeed = this.unitConfig.movement.speed;
+            this.groundY = this.unitConfig.movement.groundY;
+            
+            // AI属性
+            const ai = this.unitConfig.ai;
+            this.senseRadius = ai.senseRadius || 120;
+            this.threatRadius = ai.threatRadius || 80;
+            this.collectionRange = ai.collectionRange || 50;
+            this.buildRange = ai.buildRange || 60;
+            this.carryCapacity = ai.carryCapacity || 5;
+            
+            // 城堡边界
+            if (ai.castleBoundary) {
+                this.castleXStart = ai.castleBoundary.left;
+                this.castleXEnd = ai.castleBoundary.right;
+            } else if (worldConfig?.castle?.boundary) {
+                this.castleXStart = worldConfig.castle.boundary.left;
+                this.castleXEnd = worldConfig.castle.boundary.right;
+            } else {
+                this.castleXStart = -221;
+                this.castleXEnd = 239;
+            }
+            
+            // 待机行为
+            if (this.unitConfig.idle) {
+                this.idleAnimationChance = this.unitConfig.idle.animationChance;
+                this.idleMoveChance = this.unitConfig.idle.moveChance;
+                this.idleStaticDurationMin = this.unitConfig.idle.staticDurationMin;
+                this.idleStaticDurationMax = this.unitConfig.idle.staticDurationMax;
+            } else {
+                this.idleAnimationChance = 0.33;
+                this.idleMoveChance = 0.33;
+                this.idleStaticDurationMin = 2000;
+                this.idleStaticDurationMax = 4000;
+            }
+            
+            // 显示属性
+            this.dwarfSize = this.unitConfig.display.size;
+            
+            console.log(`Dwarf config loaded: health=${this.combatAttributes.health}, speed=${this.moveSpeed}, size=${this.dwarfSize}`);
+        } else {
+            console.warn('Dwarf config not found, using defaults');
+            this.loadDefaultConfig();
+        }
+    }
+    
+    /**
+     * 加载默认配置
+     */
+    private loadDefaultConfig(): void {
+        this.combatAttributes = {
+            health: 100,
+            maxHealth: 100,
+            attack: 20,
+            range: 50,
+            attackSpeed: 1500,
+            armor: 5
+        };
+        
+        this.moveSpeed = 100;
+        this.groundY = 789;
+        this.dwarfSize = 80;
+        this.senseRadius = 120;
+        this.threatRadius = 80;
+        this.carryCapacity = 5;
+        this.collectionRange = 50;
+        this.buildRange = 60;
+        this.castleXStart = -221;
+        this.castleXEnd = 239;
+        
+        this.idleAnimationChance = 0.33;
+        this.idleMoveChance = 0.33;
+        this.idleStaticDurationMin = 2000;
+        this.idleStaticDurationMax = 4000;
     }
 
     /**
@@ -113,11 +212,11 @@ export class Dwarf implements CombatUnit {
             // 回退到静态图片
             this.sprite = this.scene.add.image(this.x, this.y, 'dwarf_character');
             this.sprite.setOrigin(0.5, 1);
-            this.sprite.setDisplaySize(this.DWARF_SIZE, this.DWARF_SIZE);
+            this.sprite.setDisplaySize(this.dwarfSize, this.dwarfSize);
         } else {
             // 如果所有图片都加载失败，使用备用矩形
             console.warn('Dwarf images not loaded, using fallback');
-            this.sprite = this.scene.add.rectangle(this.x, this.y, this.DWARF_SIZE, this.DWARF_SIZE, 0x0000FF);
+            this.sprite = this.scene.add.rectangle(this.x, this.y, this.dwarfSize, this.dwarfSize, 0x0000FF);
             this.sprite.setOrigin(0.5, 1);
             this.sprite.setStrokeStyle(2, 0x000000);
         }
@@ -146,8 +245,8 @@ export class Dwarf implements CombatUnit {
             // 检查play方法是否存在
             if (typeof sprite.play !== 'function') {
                 console.error(`[Dwarf ${this.id}] Sprite的play方法丢失，尝试重新创建`);
-                const x = this.sprite.x;
-                const y = this.sprite.y;
+                const x = this.sprite.x || this.x;
+                const y = this.sprite.y || this.y;
                 this.sprite.destroy();
                 this.x = x;
                 this.y = y;
@@ -171,8 +270,8 @@ export class Dwarf implements CombatUnit {
             const originalHeight = this.sprite.height;
             
             // 计算缩放比例，保持宽高比
-            const scaleX = this.DWARF_SIZE / originalWidth;
-            const scaleY = this.DWARF_SIZE / originalHeight;
+            const scaleX = this.dwarfSize / originalWidth;
+            const scaleY = this.dwarfSize / originalHeight;
             const scale = Math.min(scaleX, scaleY); // 使用较小的缩放比例保持宽高比
             
             this.sprite.setScale(scale);
@@ -348,9 +447,9 @@ export class Dwarf implements CombatUnit {
      * 创建血条
      */
     private createHealthBar(): void {
-        const barWidth = 60;
-        const barHeight = 4;
-        const barY = this.y - 85; // 精灵上方
+        const barWidth = this.unitConfig?.display.healthBar.width || 60;
+        const barHeight = this.unitConfig?.display.healthBar.height || 4;
+        const barY = this.y + (this.unitConfig?.display.healthBar.offsetY || -85); // 精灵上方
         
         // 背景
         this.healthBarBg = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x000000);
@@ -368,7 +467,7 @@ export class Dwarf implements CombatUnit {
         if (!this.healthBar || !this.healthBarBg) return;
         
         const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
-        const barWidth = 60;
+        const barWidth = this.unitConfig?.display.healthBar.width || 60;
         
         // 更新血条宽度
         this.healthBar.setDisplaySize(barWidth * healthRatio, 4);
@@ -385,8 +484,9 @@ export class Dwarf implements CombatUnit {
         this.healthBar.setFillStyle(color);
         
         // 更新血条位置
-        this.healthBar.setPosition(this.x, this.y - 85);
-        this.healthBarBg.setPosition(this.x, this.y - 85);
+        const barOffsetY = this.unitConfig?.display.healthBar.offsetY || -85;
+        this.healthBar.setPosition(this.x, this.y + barOffsetY);
+        this.healthBarBg.setPosition(this.x, this.y + barOffsetY);
     }
 
     /**
@@ -562,7 +662,7 @@ export class Dwarf implements CombatUnit {
      */
     private moveToTarget(x: number, y: number): void {
         this.targetX = x;
-        this.targetY = this.GROUND_Y; // 忽略y坐标，始终保持在地面
+        this.targetY = this.groundY; // 忽略y坐标，始终保持在地面
         this.isMoving = true;
         
         // 开始移动时播放行走动画
@@ -573,6 +673,28 @@ export class Dwarf implements CombatUnit {
      * 更新矮人逻辑 - 新状态机架构
      */
     public update(delta: number): void {
+        // 检查是否已被销毁
+        if (this.isDestroyed || !this.sprite || (this.sprite as any).destroyed) {
+            return;
+        }
+        
+        // 检查位置是否有效
+        if (this.x === undefined || this.y === undefined) {
+            console.error(`[Dwarf ${this.id}] Position is undefined: x=${this.x}, y=${this.y}, groundY=${this.groundY}`);
+            // 尝试恢复到地面位置
+            if (this.groundY !== undefined) {
+                this.y = this.groundY;
+            } else {
+                // 使用默认地面高度
+                this.y = 789;
+                this.groundY = 789;
+            }
+            // 如果x也是undefined，设置一个默认值
+            if (this.x === undefined) {
+                this.x = 100;
+            }
+        }
+        
         // 定期输出调试信息
         if (Math.random() < 0.01) { // 1% 概率
             console.log(`[Dwarf ${this.id}] update called, state: ${this.state}, position: (${this.x.toFixed(0)}, ${this.y.toFixed(0)})`);
@@ -615,7 +737,7 @@ export class Dwarf implements CombatUnit {
         if (distance <= moveDistance) {
             // 到达目标
             this.x = this.targetX;
-            this.y = this.GROUND_Y; // 确保在地面上
+            this.y = this.groundY; // 确保在地面上
             this.isMoving = false;
             
             // 更新精灵位置
@@ -645,7 +767,7 @@ export class Dwarf implements CombatUnit {
             // 继续移动（只水平移动）
             const direction = dx > 0 ? 1 : -1;
             this.x += direction * moveDistance;
-            this.y = this.GROUND_Y; // 始终保持在地面
+            this.y = this.groundY; // 始终保持在地面
             
             // 更新精灵方向
             this.updateSpriteDirection(direction);
@@ -712,18 +834,18 @@ export class Dwarf implements CombatUnit {
         
         const random = Math.random();
         
-        if (random < this.IDLE_ANIMATION_CHANCE) {
+        if (random < this.idleAnimationChance) {
             // 播放动画
             this.currentIdleBehavior = 'animation';
             this.playRandomIdleAnimation();
-        } else if (random < this.IDLE_ANIMATION_CHANCE + this.IDLE_MOVE_CHANCE) {
+        } else if (random < this.idleAnimationChance + this.idleMoveChance) {
             // 移动
             this.currentIdleBehavior = 'move';
             this.startIdleMovement();
         } else {
             // 静止2-4秒
             this.currentIdleBehavior = 'static';
-            this.idleStaticDuration = 2000 + Math.random() * 2000; // 2-4秒
+            this.idleStaticDuration = this.idleStaticDurationMin + Math.random() * (this.idleStaticDurationMax - this.idleStaticDurationMin);
             this.idleAnimationTimer = 0;
             this.isPlayingIdleAnimation = false;
             
@@ -764,7 +886,7 @@ export class Dwarf implements CombatUnit {
             // 目标超出攻击范围，移动到攻击范围内
             const moveDirection = targetPos.x > this.x ? 1 : -1;
             const targetX = targetPos.x - (moveDirection * (this.combatAttributes.range - 10));
-            this.moveToTarget(targetX, this.GROUND_Y);
+            this.moveToTarget(targetX, this.groundY);
             return;
         }
         
@@ -830,7 +952,7 @@ export class Dwarf implements CombatUnit {
             randomX = Math.max(100, Math.min(1100, randomX));
         }
         
-        this.moveToTarget(randomX, this.GROUND_Y);
+        this.moveToTarget(randomX, this.groundY);
         console.log(`[Dwarf ${this.id}] starting idle movement from x:${this.x.toFixed(0)} to x:${randomX.toFixed(0)}, distance: ${Math.abs(randomX - this.x).toFixed(0)}`);
     }
 
@@ -1018,7 +1140,7 @@ export class Dwarf implements CombatUnit {
         if (nearestMonster) {
             this.combatTarget = nearestMonster;
             const monsterPos = nearestMonster.getPosition();
-            this.moveToTarget(monsterPos.x, this.GROUND_Y);
+            this.moveToTarget(monsterPos.x, this.groundY);
         }
         
         this.updateStatusDisplay();
@@ -1035,8 +1157,8 @@ export class Dwarf implements CombatUnit {
         this.state = DwarfState.DELIVER;
         
         // 移动到城堡交付点
-        const castleDeliveryX = (this.CASTLE_X_START + this.CASTLE_X_END) / 2;
-        this.moveToTarget(castleDeliveryX, this.GROUND_Y);
+        const castleDeliveryX = (this.castleXStart + this.castleXEnd) / 2;
+        this.moveToTarget(castleDeliveryX, this.groundY);
         
         this.updateStatusDisplay();
         console.log(`[Dwarf ${this.id}] 进入交付状态`);
@@ -1071,7 +1193,7 @@ export class Dwarf implements CombatUnit {
                     // 移动到建筑位置
                     const buildPos = buildingTask.position;
                     const targetX = buildPos.x + 81; // 移动到建筑中心
-                    this.moveToTarget(targetX, this.GROUND_Y); 
+                    this.moveToTarget(targetX, this.groundY); 
                     console.log(`[Dwarf ${this.id}] 移动到建筑位置: ${buildingTask.productName} at x=${targetX}`);
                 } else {
                     console.error(`[Dwarf ${this.id}] 找不到建造任务 ${this.targetBuildId}`);
@@ -1098,7 +1220,7 @@ export class Dwarf implements CombatUnit {
         const resource = this.getTargetResource();
         if (resource) {
             const resourcePos = resource.getPosition();
-            this.moveToTarget(resourcePos.x, this.GROUND_Y);
+            this.moveToTarget(resourcePos.x, this.groundY);
             console.log(`[Dwarf ${this.id}] 去收集 ${resource.getResourceType()}`);
         }
         
@@ -1187,7 +1309,7 @@ export class Dwarf implements CombatUnit {
         if (this.isMoving) return;
         
         // 检查是否在城堡范围内
-        if (this.x >= this.CASTLE_X_START && this.x <= this.CASTLE_X_END) {
+        if (this.x >= this.castleXStart && this.x <= this.castleXEnd) {
             // 交付所有资源
             this.inventory.forEach((amount, resourceType) => {
                 resourceManager.addResource(resourceType, amount);
@@ -1217,7 +1339,7 @@ export class Dwarf implements CombatUnit {
         // 检查是否需要移动到建造位置（建筑中心）
         const buildingCenterX = buildingTask.position.x + 81; // 建筑大小162px，中心偏移81px
         const distanceToTarget = Math.abs(this.x - buildingCenterX);
-        if (distanceToTarget > this.BUILD_RANGE) {
+        if (distanceToTarget > this.buildRange) {
             // 如果不在移动中，开始移动
             if (!this.isMoving) {
                 this.moveToTarget(buildingCenterX, this.y);
@@ -1273,7 +1395,7 @@ export class Dwarf implements CombatUnit {
             if (resource && !resource.getIsCollected()) {
                 // 检查是否在收集范围内
                 const distance = this.getDistanceToPoint(this.x, this.y, resource.getPosition().x, resource.getPosition().y);
-                if (distance <= this.COLLECTION_RANGE) {
+                if (distance <= this.collectionRange) {
                     // 收集资源
                     resource.collect();
                     
@@ -1327,7 +1449,7 @@ export class Dwarf implements CombatUnit {
             const buildPos = buildSite.position;
             const distance = this.getDistanceToPoint(this.x, this.y, buildPos.x, buildPos.y);
             
-            if (distance <= this.R_SENSE) {
+            if (distance <= this.senseRadius) {
                 this.sensedBuildSites.push(buildSite);
             }
         }
@@ -1347,7 +1469,7 @@ export class Dwarf implements CombatUnit {
                 const monsterPos = monster.getPosition();
                 const distance = this.getDistanceToPoint(this.x, this.y, monsterPos.x, monsterPos.y);
                 
-                if (distance <= this.R_SENSE) {
+                if (distance <= this.senseRadius) {
                     this.sensedMonsters.push(monster);
                 }
             }
@@ -1361,7 +1483,7 @@ export class Dwarf implements CombatUnit {
                 const goblinPos = goblin.getPosition();
                 const distance = this.getDistanceToPoint(this.x, this.y, goblinPos.x, goblinPos.y);
                 
-                if (distance <= this.R_SENSE) {
+                if (distance <= this.senseRadius) {
                     this.sensedMonsters.push(goblin);
                 }
             }
@@ -1377,7 +1499,7 @@ export class Dwarf implements CombatUnit {
         return this.sensedMonsters.some(monster => {
             const monsterPos = monster.getPosition();
             const distance = this.getDistanceToPoint(this.x, this.y, monsterPos.x, monsterPos.y);
-            return distance <= this.R_MONSTER_THREAT;
+            return distance <= this.threatRadius;
         });
     }
     
@@ -1392,7 +1514,7 @@ export class Dwarf implements CombatUnit {
             const monsterPos = monster.getPosition();
             const distance = this.getDistanceToPoint(this.x, this.y, monsterPos.x, monsterPos.y);
             
-            if (distance < minDistance && distance <= this.R_MONSTER_THREAT) {
+            if (distance < minDistance && distance <= this.threatRadius) {
                 minDistance = distance;
                 nearest = monster;
             }
@@ -1592,7 +1714,7 @@ export class Dwarf implements CombatUnit {
      */
     public setPosition(x: number, y: number): void {
         this.x = x;
-        this.y = this.GROUND_Y; // 忽略y参数，始终在地面
+        this.y = this.groundY; // 忽略y参数，始终在地面
         this.sprite.setPosition(this.x, this.y);
     }
 
@@ -1600,6 +1722,12 @@ export class Dwarf implements CombatUnit {
      * 销毁矮人
      */
     public destroy(): void {
+        if (this.isDestroyed) {
+            return;
+        }
+        
+        this.isDestroyed = true;
+        
         this.scene.events.off('building-purchased', this.handleBuildingPurchased, this);
         
         // 释放资源锁定
@@ -1616,7 +1744,9 @@ export class Dwarf implements CombatUnit {
             worldTaskMgr.releaseBuildSiteLock(this.targetBuildId);
         }
         
-        this.sprite.destroy();
+        if (this.sprite && !(this.sprite as any).destroyed) {
+            this.sprite.destroy();
+        }
         
         // 销毁血条
         if (this.healthBar) {
@@ -1640,7 +1770,7 @@ export class Dwarf implements CombatUnit {
     }
     
     public isAlive(): boolean {
-        return this.combatAttributes.health > 0 && this.sprite && !(this.sprite as any).destroyed;
+        return !this.isDestroyed && this.combatAttributes.health > 0 && this.sprite && !(this.sprite as any).destroyed;
     }
     
     public takeDamage(damage: number): void {
@@ -1674,10 +1804,10 @@ export class Dwarf implements CombatUnit {
     
     public getCollisionBounds(): { x: number; y: number; width: number; height: number } {
         return {
-            x: this.x - this.DWARF_SIZE / 2,
-            y: this.y - this.DWARF_SIZE,
-            width: this.DWARF_SIZE,
-            height: this.DWARF_SIZE
+            x: this.x - this.dwarfSize / 2,
+            y: this.y - this.dwarfSize,
+            width: this.dwarfSize,
+            height: this.dwarfSize
         };
     }
     

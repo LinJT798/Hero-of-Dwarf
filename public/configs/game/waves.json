@@ -1,0 +1,62 @@
+{
+  "waveSettings": {
+    "maxWaves": 5,
+    "waveCompleteDelay": 3000,
+    "spawnPosition": {
+      "x": 1200,
+      "y": 789
+    }
+  },
+  "waves": [
+    {
+      "waveNumber": 1,
+      "monsters": [
+        {
+          "type": "goblin",
+          "count": 10,
+          "spawnInterval": 1000
+        }
+      ]
+    },
+    {
+      "waveNumber": 2,
+      "monsters": [
+        {
+          "type": "goblin",
+          "count": 5,
+          "spawnInterval": 1500
+        }
+      ]
+    },
+    {
+      "waveNumber": 3,
+      "monsters": [
+        {
+          "type": "goblin",
+          "count": 7,
+          "spawnInterval": 1200
+        }
+      ]
+    },
+    {
+      "waveNumber": 4,
+      "monsters": [
+        {
+          "type": "goblin",
+          "count": 10,
+          "spawnInterval": 1000
+        }
+      ]
+    },
+    {
+      "waveNumber": 5,
+      "monsters": [
+        {
+          "type": "goblin",
+          "count": 15,
+          "spawnInterval": 800
+        }
+      ]
+    }
+  ]
+}

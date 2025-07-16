@@ -1,4 +1,6 @@
 import { CombatUnit, CombatAttributes, CombatUtils } from '../interfaces/CombatUnit';
+import { configManager } from '../systems/ConfigManager';
+import { UnitConfig } from '../types/config/UnitConfig';
 
 /**
  * 哥布林状态枚举
@@ -23,22 +25,15 @@ export class Goblin implements CombatUnit {
     // 位置和移动
     private x: number;
     private y: number;
-    private readonly GROUND_Y = 789; // 哥布林的y轴位置，与矮人保持一致
-    private readonly MOVE_SPEED = 50; // 移动速度（矮人的一半）
+    private groundY: number;
+    private moveSpeed: number;
     
     // 状态机
     private state: GoblinState = GoblinState.MOVING;
     private isDestroyed: boolean = false;
     
     // 战斗属性
-    private combatAttributes: CombatAttributes = {
-        health: 100,
-        maxHealth: 100,
-        attack: 20,
-        range: 50, // 50像素攻击范围
-        attackSpeed: 1500, // 1.5秒攻击间隔
-        armor: 5
-    };
+    private combatAttributes: CombatAttributes;
     
     // 攻击系统
     private currentTarget: CombatUnit | null = null;
@@ -46,7 +41,16 @@ export class Goblin implements CombatUnit {
     
     // 死亡计时器
     private deathTimer: number = 0;
-    private readonly DEATH_DURATION = 20000; // 20秒死亡持续时间
+    private deathDuration: number;
+    
+    // 单位配置
+    private unitConfig: UnitConfig | null = null;
+    
+    // 显示配置
+    private goblinSize: number;
+    private healthBarWidth: number;
+    private healthBarHeight: number;
+    private healthBarOffsetY: number;
     
     // 目标检测
     private targetBuildings: any[] = [];
@@ -56,13 +60,74 @@ export class Goblin implements CombatUnit {
         this.scene = scene;
         this.id = id;
         this.x = x;
-        this.y = this.GROUND_Y;
+        
+        // 加载配置
+        this.loadConfig();
+        
+        // 设置Y坐标为配置中的地面高度
+        this.y = this.groundY;
         
         this.createSprite();
         this.createAnimations();
         this.createHealthBar();
         
-        console.log(`Goblin ${this.id} created at (${x}, ${this.y})`);
+        console.log(`Goblin ${this.id} created at (${x}, ${this.y}) with config-based attributes`);
+    }
+    
+    /**
+     * 从配置加载哥布林属性
+     */
+    private loadConfig(): void {
+        const unitsConfig = configManager.getUnitsConfig();
+        
+        console.log(`[Goblin] Loading config, unitsConfig:`, unitsConfig);
+        
+        if (unitsConfig && unitsConfig.units && unitsConfig.units.goblin) {
+            this.unitConfig = unitsConfig.units.goblin;
+            
+            // 战斗属性
+            this.combatAttributes = { ...this.unitConfig.combat };
+            
+            // 移动属性
+            this.moveSpeed = this.unitConfig.movement.speed;
+            this.groundY = this.unitConfig.movement.groundY;
+            
+            // AI属性
+            this.deathDuration = this.unitConfig.ai.deathDuration || 20000;
+            
+            // 显示属性
+            this.goblinSize = this.unitConfig.display.size;
+            this.healthBarWidth = this.unitConfig.display.healthBar.width;
+            this.healthBarHeight = this.unitConfig.display.healthBar.height;
+            this.healthBarOffsetY = this.unitConfig.display.healthBar.offsetY;
+            
+            console.log(`Goblin config loaded: health=${this.combatAttributes.health}, speed=${this.moveSpeed}, size=${this.goblinSize}`);
+        } else {
+            console.warn('Goblin config not found, using defaults');
+            this.loadDefaultConfig();
+        }
+    }
+    
+    /**
+     * 加载默认配置
+     */
+    private loadDefaultConfig(): void {
+        this.combatAttributes = {
+            health: 100,
+            maxHealth: 100,
+            attack: 20,
+            range: 50,
+            attackSpeed: 1500,
+            armor: 5
+        };
+        
+        this.moveSpeed = 50;
+        this.groundY = 789;
+        this.deathDuration = 20000;
+        this.goblinSize = 79;
+        this.healthBarWidth = 60;
+        this.healthBarHeight = 4;
+        this.healthBarOffsetY = -85;
     }
     
     /**
@@ -72,12 +137,14 @@ export class Goblin implements CombatUnit {
         // 使用第一帧作为默认纹理
         this.sprite = this.scene.add.sprite(this.x, this.y, 'goblin_walk_1');
         this.sprite.setOrigin(0.5, 1); // 底部中心对齐
-        this.sprite.setDisplaySize(79, 79); // 缩放到79x79
+        this.sprite.setDisplaySize(this.goblinSize, this.goblinSize); // 使用配置的尺寸
         
-        // 水平反转精灵，因为原始资源面朝右，需要面朝左
-        this.sprite.setFlipX(true);
+        // 水平反转精灵（如果配置中指定）
+        if (this.unitConfig?.display.flipX) {
+            this.sprite.setFlipX(true);
+        }
         
-        console.log(`Goblin sprite created with size 79x79 at (${this.x}, ${this.y}), flipped horizontally`);
+        console.log(`Goblin sprite created with size ${this.goblinSize}x${this.goblinSize} at (${this.x}, ${this.y})${this.unitConfig?.display.flipX ? ', flipped horizontally' : ''}`);
     }
     
     /**
@@ -164,16 +231,14 @@ export class Goblin implements CombatUnit {
      * 创建血条
      */
     private createHealthBar(): void {
-        const barWidth = 60;
-        const barHeight = 4;
-        const barY = this.y - 85; // 精灵上方
+        const barY = this.y + this.healthBarOffsetY; // 精灵上方
         
         // 背景
-        this.healthBarBg = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x000000);
+        this.healthBarBg = this.scene.add.rectangle(this.x, barY, this.healthBarWidth, this.healthBarHeight, 0x000000);
         this.healthBarBg.setOrigin(0.5, 0.5);
         
         // 血条
-        this.healthBar = this.scene.add.rectangle(this.x, barY, barWidth, barHeight, 0x00FF00);
+        this.healthBar = this.scene.add.rectangle(this.x, barY, this.healthBarWidth, this.healthBarHeight, 0x00FF00);
         this.healthBar.setOrigin(0.5, 0.5);
     }
     
@@ -184,10 +249,9 @@ export class Goblin implements CombatUnit {
         if (!this.healthBar || !this.healthBarBg) return;
         
         const healthRatio = this.combatAttributes.health / this.combatAttributes.maxHealth;
-        const barWidth = 60;
         
         // 更新血条宽度
-        this.healthBar.setDisplaySize(barWidth * healthRatio, 4);
+        this.healthBar.setDisplaySize(this.healthBarWidth * healthRatio, this.healthBarHeight);
         
         // 更新血条颜色
         let color = 0x00FF00; // 绿色
@@ -201,8 +265,9 @@ export class Goblin implements CombatUnit {
         this.healthBar.setFillStyle(color);
         
         // 更新血条位置
-        this.healthBar.setPosition(this.x, this.y - 85);
-        this.healthBarBg.setPosition(this.x, this.y - 85);
+        const barY = this.y + this.healthBarOffsetY;
+        this.healthBar.setPosition(this.x, barY);
+        this.healthBarBg.setPosition(this.x, barY);
     }
     
     /**
@@ -247,14 +312,23 @@ export class Goblin implements CombatUnit {
         }
         
         // 继续移动
-        this.x -= this.MOVE_SPEED * (delta / 1000);
+        this.x -= this.moveSpeed * (delta / 1000);
         this.sprite.setPosition(this.x, this.y);
         
         // 检查是否到达左边界
         if (this.x < -50) {
             // 到达左边界，触发城堡攻击事件
-            this.scene.events.emit('castle-attacked', { goblin: this });
-            this.destroy();
+            // 先触发事件，再销毁，并传递必要的信息而不是整个对象
+            this.scene.events.emit('castle-attacked', { 
+                goblinId: this.id,
+                goblinType: 'goblin',
+                position: { x: this.x, y: this.y }
+            });
+            
+            // 延迟销毁，确保事件处理器能正确处理
+            this.scene.time.delayedCall(100, () => {
+                this.destroy();
+            });
         }
     }
     
@@ -291,7 +365,7 @@ export class Goblin implements CombatUnit {
     private updateDeadState(delta: number): void {
         this.deathTimer += delta;
         
-        if (this.deathTimer >= this.DEATH_DURATION) {
+        if (this.deathTimer >= this.deathDuration) {
             // 死亡时间结束，销毁哥布林
             this.destroy();
         }
@@ -399,11 +473,12 @@ export class Goblin implements CombatUnit {
     }
     
     public getCollisionBounds(): { x: number; y: number; width: number; height: number } {
+        const halfSize = this.goblinSize / 2;
         return {
-            x: this.x - 39.5,
-            y: this.y - 79,
-            width: 79,
-            height: 79
+            x: this.x - halfSize,
+            y: this.y - this.goblinSize,
+            width: this.goblinSize,
+            height: this.goblinSize
         };
     }
     
