@@ -928,10 +928,17 @@ export class Dwarf implements CombatUnit {
         
         // 检查是否有攻击目标
         if (!this.combatTarget || !this.combatTarget.isAlive()) {
-            // 目标已死亡，退出战斗状态
+            // 目标死亡，寻找新的目标
             this.combatTarget = null;
-            this.evaluateTransitions(); // 重新评估状态
-            return;
+            const newTarget = this.findNearestMonster();
+            if (newTarget) {
+                this.combatTarget = newTarget;
+                console.log(`[Dwarf ${this.id}] 目标死亡，切换到新目标`);
+            } else {
+                // 没有新目标，退出战斗状态
+                this.evaluateTransitions(); // 重新评估状态
+                return;
+            }
         }
         
         // 检查目标是否在攻击范围内
@@ -1344,25 +1351,11 @@ export class Dwarf implements CombatUnit {
     // =================== 状态执行函数 ===================
     
     /**
-     * 执行战斗状态
+     * 执行战斗状态（使用统一的updateCombat逻辑）
      */
     private executeCombat(delta: number): void {
-        if (!this.combatTarget || !this.combatTarget.isAlive()) {
-            // 目标死亡，结束战斗
-            this.combatTarget = null;
-            return;
-        }
-        
-        // 如果在移动中，等待到达
-        if (this.isMoving) return;
-        
-        // 执行攻击
-        this.attackTimer += delta / 1000;
-        if (this.attackTimer >= 1 / this.attackSpeed) {
-            this.combatTarget.takeDamage(this.attackDamage);
-            this.attackTimer = 0;
-            console.log(`[Dwarf ${this.id}] 攻击造成 ${this.attackDamage} 点伤害`);
-        }
+        // 战斗逻辑统一在updateCombat中处理
+        // 这里不需要重复的逻辑
     }
     
     /**
@@ -1886,6 +1879,13 @@ export class Dwarf implements CombatUnit {
         
         target.takeDamage(damage);
         console.log(`Dwarf ${this.id} attacks target for ${damage} damage`);
+        
+        // 触发攻击事件用于音效
+        this.scene.events.emit('dwarf-attack', {
+            dwarf: this,
+            target: target,
+            damage: damage
+        });
     }
     
     public getCollisionBounds(): { x: number; y: number; width: number; height: number } {

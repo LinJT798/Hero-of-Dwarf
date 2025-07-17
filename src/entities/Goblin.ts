@@ -315,7 +315,9 @@ export class Goblin implements CombatUnit {
         if (this.currentTarget) {
             // 有目标，切换到攻击状态
             this.state = GoblinState.ATTACKING;
+            // 进入攻击状态时播放攻击动画，并重置攻击计时器
             this.playAnimation('goblin_attack');
+            this.lastAttackTime = Date.now();
             console.log(`Goblin ${this.id} found target, switching to attack state`);
             return;
         }
@@ -360,11 +362,21 @@ export class Goblin implements CombatUnit {
             }
         }
         
-        // 尝试攻击
-        const currentTime = Date.now();
-        if (currentTime - this.lastAttackTime >= this.combatAttributes.attackSpeed) {
-            this.attackTarget(this.currentTarget);
-            this.lastAttackTime = currentTime;
+        // 检查是否需要重新播放攻击动画
+        if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+            const isPlayingAttack = this.sprite.anims.isPlaying && 
+                                   this.sprite.anims.currentAnim?.key === 'goblin_attack';
+            
+            if (!isPlayingAttack) {
+                // 如果攻击动画没有在播放，检查是否可以攻击
+                const currentTime = Date.now();
+                if (currentTime - this.lastAttackTime >= this.combatAttributes.attackSpeed) {
+                    // 重新播放攻击动画
+                    this.playAnimation('goblin_attack');
+                    this.attackTarget(this.currentTarget);
+                    this.lastAttackTime = currentTime;
+                }
+            }
         }
     }
     
@@ -479,6 +491,13 @@ export class Goblin implements CombatUnit {
         
         target.takeDamage(damage);
         console.log(`Goblin ${this.id} attacks target for ${damage} damage`);
+        
+        // 触发攻击事件用于音效
+        this.scene.events.emit('goblin-attack', {
+            goblin: this,
+            target: target,
+            damage: damage
+        });
     }
     
     public getCollisionBounds(): { x: number; y: number; width: number; height: number } {

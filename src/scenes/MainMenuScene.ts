@@ -1,5 +1,7 @@
 import { Scene } from 'phaser';
 import { AssetManager } from '../systems/AssetManager';
+import { audioManager } from '../systems/AudioManager';
+import { configManager } from '../systems/ConfigManager';
 
 /**
  * 主菜单场景
@@ -55,6 +57,9 @@ export class MainMenuScene extends Scene {
         
         // 开始浮现动画
         this.startFadeInAnimations();
+        
+        // 初始化音频系统并播放BGM（非侵入式）
+        this.initializeAudioSystemWithDelay();
         
         console.log('Main menu initialized successfully');
     }
@@ -270,10 +275,95 @@ export class MainMenuScene extends Scene {
         });
     }
 
+    /**
+     * 初始化音频系统（带延迟，等待音频加载完成）
+     */
+    private initializeAudioSystemWithDelay(): void {
+        try {
+            // 延迟更长时间，确保音频文件完全加载
+            this.time.delayedCall(2000, () => {
+                // 加载音频配置
+                configManager.loadConfig('game/audio.json').then(() => {
+                    const audioConfig = configManager.getAudioConfig();
+                    if (audioConfig) {
+                        audioManager.initialize(this, audioConfig);
+                        console.log('[MainMenuScene] Audio system initialized');
+                        
+                        // 播放首页BGM
+                        this.time.delayedCall(500, () => {
+                            this.playMenuBGM();
+                        });
+                    }
+                }).catch(error => {
+                    console.warn('[MainMenuScene] Failed to load audio config:', error);
+                });
+            });
+        } catch (error) {
+            console.warn('[MainMenuScene] Failed to initialize audio system:', error);
+        }
+    }
+    
+    /**
+     * 播放首页BGM
+     */
+    private playMenuBGM(): void {
+        try {
+            audioManager.playBGM('menu_bgm');
+            console.log('[MainMenuScene] Menu BGM started');
+        } catch (error) {
+            console.warn('[MainMenuScene] Failed to play menu BGM:', error);
+        }
+    }
+    
+    /**
+     * 用户交互后播放音频
+     */
+    private enableAudioOnInteraction(): void {
+        // 监听用户的第一次交互
+        const playAudioOnce = () => {
+            this.playMenuBGM();
+            // 移除监听器，只需要播放一次
+            this.input.off('pointerdown', playAudioOnce);
+            this.input.keyboard?.off('keydown', playAudioOnce);
+        };
+        
+        this.input.on('pointerdown', playAudioOnce);
+        this.input.keyboard?.on('keydown', playAudioOnce);
+    }
+    
+    /**
+     * 停止首页BGM
+     */
+    private stopMenuBGM(): void {
+        try {
+            audioManager.stopBGM();
+            console.log('[MainMenuScene] Menu BGM stopped');
+        } catch (error) {
+            console.warn('[MainMenuScene] Failed to stop menu BGM:', error);
+        }
+    }
+
     private startGame() {
         console.log('Starting game...');
         
+        // 停止首页BGM
+        this.stopMenuBGM();
+        
         // 直接切换到游戏场景
         this.scene.start('MainGameScene');
+    }
+    
+    /**
+     * 场景关闭时的清理
+     */
+    shutdown() {
+        // 停止首页BGM
+        this.stopMenuBGM();
+        
+        // 移除事件监听
+        this.input.keyboard?.off('keydown', this.handleKeyDown, this);
+        this.scale.off('resize', this.handleResize, this);
+        
+        console.log('[MainMenuScene] Scene shutdown');
     }
 }

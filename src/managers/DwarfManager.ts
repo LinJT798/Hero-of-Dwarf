@@ -14,7 +14,7 @@ export class DwarfManager {
     private worldTaskMgr!: WorldTaskManager;
     
     // 矮人生成配置 (基于Figma设计调整)
-    private readonly MAX_DWARFS = 3;
+    private readonly MAX_DWARFS = 15; // 增加矮人数量限制，允许购买更多矮人
     private readonly SPAWN_POSITIONS = [
         { x: 100, y: 789 },  // 地面位置 (y=789是land的上边界)
         { x: 200, y: 789 },  
@@ -43,9 +43,12 @@ export class DwarfManager {
      * 设置事件监听
      */
     private setupEventListeners(): void {
+        console.log('[DwarfManager] Setting up event listeners...');
         this.scene.events.on('resource-landed', this.handleResourceLanded, this);
         this.scene.events.on('building-purchased', this.handleBuildingRequest, this);
         this.scene.events.on('dwarf-killed', this.handleDwarfKilled, this);
+        this.scene.events.on('unit-purchased', this.handleUnitPurchased, this);
+        console.log('[DwarfManager] Event listeners setup complete');
         
         // resource-drop事件已废弃，资源现在直接在ResourceDropSystem中注册
     }
@@ -54,7 +57,9 @@ export class DwarfManager {
      * 生成初始矮人
      */
     private spawnInitialDwarfs(): void {
-        for (let i = 0; i < this.MAX_DWARFS; i++) {
+        // 只生成前3个矮人，剩余的可以通过购买获得
+        const initialDwarfCount = Math.min(3, this.SPAWN_POSITIONS.length);
+        for (let i = 0; i < initialDwarfCount; i++) {
             this.spawnDwarf(this.SPAWN_POSITIONS[i]);
         }
     }
@@ -63,22 +68,33 @@ export class DwarfManager {
      * 生成矮人
      */
     private spawnDwarf(position: { x: number; y: number }): Dwarf {
+        console.log(`[DwarfManager] spawnDwarf called with position: (${position.x}, ${position.y})`);
+        
         const dwarfId = `dwarf_${this.nextDwarfId++}`;
+        console.log(`[DwarfManager] Creating dwarf with ID: ${dwarfId}`);
+        
         const dwarf = new Dwarf(this.scene, dwarfId, position.x, position.y);
+        console.log(`[DwarfManager] Dwarf instance created:`, dwarf);
         
         // 添加矮人精灵到容器
         const dwarfSprite = dwarf.getSprite();
+        console.log(`[DwarfManager] Dwarf sprite:`, dwarfSprite);
         if (dwarfSprite) {
             this.container.add(dwarfSprite);
+            console.log(`[DwarfManager] Added dwarf sprite to container`);
+        } else {
+            console.warn(`[DwarfManager] No sprite found for dwarf ${dwarfId}`);
         }
         
         // 添加血条到容器
         const healthBarObjects = dwarf.getHealthBarObjects();
+        console.log(`[DwarfManager] Health bar objects:`, healthBarObjects);
         healthBarObjects.forEach(obj => {
             this.container.add(obj);
         });
         
         this.dwarfs.set(dwarfId, dwarf);
+        console.log(`[DwarfManager] Added dwarf to dwarfs map. Total count: ${this.dwarfs.size}`);
         
         console.log(`Spawned dwarf: ${dwarfId} at (${position.x}, ${position.y})`);
         return dwarf;
@@ -260,12 +276,18 @@ export class DwarfManager {
      * 添加新矮人
      */
     public addDwarf(position: { x: number; y: number }): Dwarf | null {
+        console.log(`[DwarfManager] addDwarf called with position: (${position.x}, ${position.y})`);
+        console.log(`[DwarfManager] Current dwarfs count: ${this.dwarfs.size}, MAX: ${this.MAX_DWARFS}`);
+        
         if (this.dwarfs.size >= this.MAX_DWARFS) {
             console.warn('Cannot add more dwarfs, max limit reached');
             return null;
         }
 
-        return this.spawnDwarf(position);
+        console.log(`[DwarfManager] Calling spawnDwarf...`);
+        const dwarf = this.spawnDwarf(position);
+        console.log(`[DwarfManager] spawnDwarf returned:`, dwarf ? `dwarf with id ${dwarf.id}` : 'null');
+        return dwarf;
     }
 
     /**
@@ -300,6 +322,43 @@ export class DwarfManager {
         this.cleanupCollectedResources();
     }
 
+
+    /**
+     * 处理单位购买事件
+     */
+    private handleUnitPurchased(data: { productId: string; unitType: string; productName: string }): void {
+        console.log(`[DwarfManager] handleUnitPurchased called with:`, data);
+        console.log(`[DwarfManager] Current dwarf count: ${this.dwarfs.size}/${this.MAX_DWARFS}`);
+        
+        if (data.unitType === 'dwarf') {
+            console.log(`[DwarfManager] Unit purchased: ${data.productName}`);
+            
+            // 在城堡处创建矮人
+            const castlePosition = this.getCastleSpawnPosition();
+            console.log(`[DwarfManager] Castle spawn position: (${castlePosition.x}, ${castlePosition.y})`);
+            
+            const dwarf = this.addDwarf(castlePosition);
+            
+            if (dwarf) {
+                console.log(`[DwarfManager] Created dwarf at castle position (${castlePosition.x}, ${castlePosition.y})`);
+                console.log(`[DwarfManager] New dwarf count: ${this.dwarfs.size}/${this.MAX_DWARFS}`);
+            } else {
+                console.warn(`[DwarfManager] Failed to create dwarf - max limit reached`);
+            }
+        } else {
+            console.log(`[DwarfManager] Ignoring non-dwarf unit type: ${data.unitType}`);
+        }
+    }
+
+    /**
+     * 获取城堡生成位置
+     */
+    private getCastleSpawnPosition(): { x: number; y: number } {
+        // 根据城堡边界随机选择位置
+        const castleBoundary = { left: -221, right: 239 };
+        const randomX = Math.random() * (castleBoundary.right - castleBoundary.left) + castleBoundary.left;
+        return { x: randomX, y: 789 }; // 使用地面高度
+    }
 
     /**
      * 获取矮人管理器状态信息（调试用）
@@ -352,6 +411,7 @@ export class DwarfManager {
     public destroy(): void {
         this.scene.events.off('resource-landed', this.handleResourceLanded, this);
         this.scene.events.off('building-purchased', this.handleBuildingRequest, this);
+        this.scene.events.off('unit-purchased', this.handleUnitPurchased, this);
         this.scene.events.off('dwarf-killed', this.handleDwarfKilled, this);
         // resource-drop事件已废弃
         

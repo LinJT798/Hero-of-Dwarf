@@ -36,6 +36,7 @@ export interface ShopLayoutConfig {
 export interface ShopProductConfig {
     id: string;
     buildingType: string;
+    unitType?: string;
     name: string;
     cost: { [resourceType: string]: number };
     weight: number;

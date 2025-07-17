@@ -149,7 +149,7 @@ export class AssetManager {
      * @returns 是否已加载
      */
     isAssetLoaded(key: string): boolean {
-        return this.loadedAssets.has(key) || this.scene.textures.exists(key);
+        return this.loadedAssets.has(key) || this.scene.textures.exists(key) || this.scene.cache.audio.exists(key);
     }
 
     /**
@@ -208,6 +208,52 @@ export class AssetManager {
     }
 
     /**
+     * 动态加载单位图标
+     * 基于配置文件中的单位类型
+     */
+    async loadUnitIcons(): Promise<void> {
+        const unitIcons: AssetConfig[] = [];
+        
+        // 尝试从 ConfigManager 获取配置
+        try {
+            // 首先尝试从已加载的配置中获取
+            const configManager = (window as any).configManager;
+            let unitsConfig = null;
+            
+            if (configManager && typeof configManager.getUnitsConfig === 'function') {
+                unitsConfig = configManager.getUnitsConfig();
+            }
+            
+            // 如果配置管理器中没有，尝试直接加载
+            if (!unitsConfig) {
+                unitsConfig = await fetch('/configs/game/units.json').then(res => res.json());
+            }
+            
+            if (unitsConfig && unitsConfig.units) {
+                Object.keys(unitsConfig.units).forEach(unitType => {
+                    const iconKey = `${unitType}_icon`;
+                    const iconPath = `assets/images/${iconKey}.png`;
+                    
+                    if (!this.isAssetLoaded(iconKey)) {
+                        unitIcons.push({
+                            key: iconKey,
+                            type: 'image',
+                            path: iconPath
+                        });
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Failed to load unit types from config for icons:', error);
+        }
+        
+        // 加载找到的图标
+        if (unitIcons.length > 0) {
+            await this.loadAssets(unitIcons);
+        }
+    }
+
+    /**
      * 预加载Figma图片资源
      */
     /**
@@ -224,16 +270,68 @@ export class AssetManager {
         console.log('[AssetManager] Progress bar assets loaded');
     }
     
+    /**
+     * 加载音频资源
+     * 基于音频配置加载音频文件
+     */
+    async loadAudioAssets(): Promise<void> {
+        const audioAssets: AssetConfig[] = [];
+        
+        try {
+            // 直接从配置文件加载音频配置，确保能够加载音频文件
+            console.log('[AssetManager] Loading audio config directly from file');
+            const audioConfig = await fetch('/configs/game/audio.json').then(res => res.json());
+            
+            if (audioConfig) {
+                // 加载音乐文件
+                if (audioConfig.music) {
+                    Object.keys(audioConfig.music).forEach(musicKey => {
+                        const musicPath = audioConfig.music[musicKey];
+                        if (musicPath && !this.isAssetLoaded(musicKey)) {
+                            console.log(`[AssetManager] Adding audio asset: ${musicKey} -> ${musicPath}`);
+                            audioAssets.push({
+                                key: musicKey,
+                                type: 'audio',
+                                path: musicPath
+                            });
+                        }
+                    });
+                }
+                
+                // 加载音效文件
+                if (audioConfig.soundEffects) {
+                    Object.keys(audioConfig.soundEffects).forEach(sfxKey => {
+                        const sfxPath = audioConfig.soundEffects[sfxKey];
+                        if (sfxPath && !this.isAssetLoaded(sfxKey)) {
+                            audioAssets.push({
+                                key: sfxKey,
+                                type: 'audio',
+                                path: sfxPath
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load audio config, using defaults:', error);
+        }
+        
+        // 加载音频资源
+        if (audioAssets.length > 0) {
+            console.log(`[AssetManager] Loading ${audioAssets.length} audio assets:`, audioAssets);
+            await this.loadAssets(audioAssets);
+            console.log(`[AssetManager] Loaded ${audioAssets.length} audio assets`);
+        } else {
+            console.log('[AssetManager] No audio assets to load');
+        }
+    }
+
     async loadBaseAssets(): Promise<void> {
         const figmaAssets: AssetConfig[] = [
             // 主菜单资源 (允许加载失败)
             { key: 'menu-background', type: 'image', path: 'assets/images/menu-background.png' },
             { key: 'game-title', type: 'image', path: 'assets/images/game-title.png' },
             { key: 'start-button', type: 'image', path: 'assets/images/start-button.png' },
-            
-            // 主菜单音效 (允许加载失败)
-            { key: 'button-click', type: 'audio', path: 'assets/audio/button-click.wav' },
-            { key: 'button-hover', type: 'audio', path: 'assets/audio/button-hover.wav' },
             
             // 背景图片
             { key: 'back_sky', type: 'image', path: 'assets/images/back_sky.png' },
@@ -243,6 +341,7 @@ export class AssetManager {
             // 商店相关图片
             { key: 'store', type: 'image', path: 'assets/images/store.png' },
             { key: 'archer_icon', type: 'image', path: 'assets/images/archer_icon.png' },
+            { key: 'dwarf_icon', type: 'image', path: 'assets/images/dwarf_icon.png' },
             
             // 进度条资源
             { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
@@ -269,7 +368,7 @@ export class AssetManager {
             { key: 'coin', type: 'image', path: 'assets/images/coin.png' },
             { key: 'wood', type: 'image', path: 'assets/images/wood.png' },
             { key: 'stone', type: 'image', path: 'assets/images/stone.png' },
-            { key: 'mithril', type: 'image', path: 'assets/images/mithril.png' },
+            { key: 'mithril', type: 'image', path: 'assets/images/mithrill.png' },
             { key: 'food', type: 'image', path: 'assets/images/food.png' },
             
             // 非资源方块图片 (可消除但不掉落资源)
@@ -328,6 +427,12 @@ export class AssetManager {
             
             // 动态加载建筑图标
             await this.loadBuildingIcons();
+            
+            // 动态加载单位图标
+            await this.loadUnitIcons();
+            
+            // 动态加载音频资源
+            await this.loadAudioAssets();
         } catch (error) {
             console.warn('Failed to load some Figma assets, creating fallback textures:', error);
             this.createDemoTextures();

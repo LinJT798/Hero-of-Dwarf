@@ -1,0 +1,14 @@
+{
+  "music": {
+    "menu_bgm": "assets/audio/music/menu_bgm.mp3",
+    "game_bgm": "assets/audio/music/game_bgm.mp3"
+  },
+  "soundEffects": {
+    "match_success": "assets/audio/sfx/match_success.wav",
+    "attack": "assets/audio/sfx/attack.wav"
+  },
+  "volumes": {
+    "music": 0.7,
+    "soundEffects": 0.8
+  }
+}

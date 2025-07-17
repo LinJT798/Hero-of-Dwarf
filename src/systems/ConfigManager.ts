@@ -3,6 +3,7 @@ import { BuildingsConfigFile } from '../types/config/BuildingConfig';
 import { WavesConfigFile } from '../types/config/WaveConfig';
 import { ShopConfigFile } from '../types/config/ShopConfig';
 import { WorldConfigFile } from '../types/config/WorldConfig';
+import { AudioConfig } from '../types/config/AudioConfig';
 
 /**
  * 简化的配置管理器
@@ -168,6 +169,13 @@ export class ConfigManager {
         return this.getConfig('game_world') as WorldConfigFile;
     }
 
+    /**
+     * 获取音频配置
+     */
+    getAudioConfig(): AudioConfig | null {
+        return this.getConfig('game_audio') as AudioConfig;
+    }
+
     private getDefaultConfig(configName: string): any {
         // 返回各种配置的默认值
         const defaultConfigs: { [key: string]: any } = {
@@ -258,6 +266,20 @@ export class ConfigManager {
                 ground: { y: 789 },
                 castle: { boundary: { left: -221, right: 239 } },
                 gameArea: { width: 1280, height: 832 }
+            },
+            'game_audio': {
+                music: {
+                    menu_bgm: "assets/audio/music/menu_bgm.mp3",
+                    game_bgm: "assets/audio/music/game_bgm.mp3"
+                },
+                soundEffects: {
+                    match_success: "assets/audio/sfx/match_success.wav",
+                    attack: "assets/audio/sfx/attack.wav"
+                },
+                volumes: {
+                    music: 0.7,
+                    soundEffects: 0.8
+                }
             }
         };
 

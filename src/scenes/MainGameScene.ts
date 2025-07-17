@@ -12,6 +12,7 @@ import { GameStateManager } from '../systems/GameStateManager';
 import { LandAnimation } from '../entities/LandAnimation';
 import { WaveProgressBar } from '../entities/WaveProgressBar';
 import { WaveBanner } from '../ui/WaveBanner';
+import { audioManager } from '../systems/AudioManager';
 
 /**
  * 主游戏场景
@@ -112,6 +113,9 @@ export class MainGameScene extends Scene {
         // 初始化配置（等待完成）
         await this.initializeConfigs();
         
+        // 初始化音频系统
+        this.initializeAudioSystem();
+        
         // 创建背景
         this.createBackground();
         
@@ -134,6 +138,9 @@ export class MainGameScene extends Scene {
         // 确保顶层容器真的在最上层
         this.children.bringToTop(this.topLayerContainer);
         
+        // 播放关卡BGM
+        this.playGameBGM();
+        
         console.log('Game initialized successfully');
     }
 
@@ -148,7 +155,8 @@ export class MainGameScene extends Scene {
                 'game/units.json',
                 'game/buildings.json',
                 'game/waves.json',
-                'game/world.json'
+                'game/world.json',
+                'game/audio.json'
             ]);
             console.log('Configs loaded successfully');
         } catch (error) {
@@ -483,6 +491,15 @@ export class MainGameScene extends Scene {
         // 监听进度条相关事件
         this.events.on('game-timer-started', this.handleGameTimerStarted, this);
         this.events.on('game-time-update', this.handleGameTimeUpdate, this);
+        
+        // 监听音频相关事件
+        this.events.on('match3-match-success', this.handleMatchSuccess, this);
+        this.events.on('all-waves-completed', this.handleGameVictory, this);
+        this.events.on('castle-destroyed', this.handleGameDefeat, this);
+        this.events.on('goblin-killed', this.handleAttackEvent, this);
+        this.events.on('monster-killed', this.handleAttackEvent, this);
+        this.events.on('dwarf-attack', this.handleAttackEvent, this);
+        this.events.on('goblin-attack', this.handleAttackEvent, this);
     }
 
     private handleResize() {
@@ -713,6 +730,95 @@ export class MainGameScene extends Scene {
         // 更新进度条
         if (this.waveProgressBar) {
             this.waveProgressBar.updateProgress(data.currentTime);
+        }
+    }
+    
+    /**
+     * 初始化音频系统
+     */
+    private initializeAudioSystem(): void {
+        try {
+            const audioConfig = configManager.getAudioConfig();
+            if (audioConfig) {
+                audioManager.initialize(this, audioConfig);
+                console.log('[MainGameScene] Audio system initialized');
+            } else {
+                console.warn('[MainGameScene] Audio config not found');
+            }
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to initialize audio system:', error);
+        }
+    }
+    
+    /**
+     * 播放关卡BGM
+     */
+    private playGameBGM(): void {
+        try {
+            audioManager.playBGM('game_bgm');
+            console.log('[MainGameScene] Game BGM started');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to play game BGM:', error);
+        }
+    }
+    
+    /**
+     * 停止关卡BGM
+     */
+    private stopGameBGM(): void {
+        try {
+            audioManager.stopBGM();
+            console.log('[MainGameScene] Game BGM stopped');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to stop game BGM:', error);
+        }
+    }
+    
+    /**
+     * 处理连连看匹配成功事件
+     */
+    private handleMatchSuccess(data: any): void {
+        try {
+            audioManager.playSFX('match_success');
+            console.log('[MainGameScene] Match success SFX played');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to play match success SFX:', error);
+        }
+    }
+    
+    /**
+     * 处理攻击事件（矮人/哥布林攻击）
+     */
+    private handleAttackEvent(data: any): void {
+        try {
+            audioManager.playSFX('attack');
+            console.log('[MainGameScene] Attack SFX played');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to play attack SFX:', error);
+        }
+    }
+    
+    /**
+     * 处理游戏胜利事件
+     */
+    private handleGameVictory(data: any): void {
+        try {
+            this.stopGameBGM();
+            console.log('[MainGameScene] Game victory - BGM stopped');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to handle game victory:', error);
+        }
+    }
+    
+    /**
+     * 处理游戏失败事件
+     */
+    private handleGameDefeat(data: any): void {
+        try {
+            this.stopGameBGM();
+            console.log('[MainGameScene] Game defeat - BGM stopped');
+        } catch (error) {
+            console.warn('[MainGameScene] Failed to handle game defeat:', error);
         }
     }
 }

@@ -8,6 +8,8 @@ import { BuildingFactory } from '../factories/BuildingFactory';
 export interface ShopProduct {
     id: string;
     type: string;
+    buildingType?: string;
+    unitType?: string;
     name: string;
     cost: { [key: string]: number };
     weight: number;
@@ -238,23 +240,34 @@ export class Shop {
             product.purchased = true;
             this.productSlots[slotIndex].setPurchased(true);
             
-            // 触发建筑购买事件（用于UI反馈等）
-            const productType = product.buildingType || product.type;
-            this.scene.events.emit('building-purchased', {
-                productId: product.id,
-                productType: productType,
-                productName: product.name
-            });
-            
-            // 触发地基放置事件（这是建造流程的开始）
-            this.scene.events.emit('building-foundation-place', {
-                productId: product.id,
-                productType: productType,
-                productName: product.name
-            });
-            
-            console.log(`Purchased ${product.name} for`, product.cost);
-            console.log(`Triggered building-foundation-place event for ${product.name}`);
+            // 根据商品类型触发不同的事件
+            if (product.buildingType) {
+                // 建筑类型商品
+                this.scene.events.emit('building-purchased', {
+                    productId: product.id,
+                    productType: product.buildingType,
+                    productName: product.name
+                });
+                
+                // 触发地基放置事件（这是建造流程的开始）
+                this.scene.events.emit('building-foundation-place', {
+                    productId: product.id,
+                    productType: product.buildingType,
+                    productName: product.name
+                });
+                
+                console.log(`Purchased building ${product.name} for`, product.cost);
+            } else if (product.unitType) {
+                // 单位类型商品
+                console.log(`[Shop] Emitting unit-purchased event for ${product.name}`);
+                this.scene.events.emit('unit-purchased', {
+                    productId: product.id,
+                    unitType: product.unitType,
+                    productName: product.name
+                });
+                
+                console.log(`Purchased unit ${product.name} for`, product.cost);
+            }
             
             // 检查是否需要刷新商店
             this.checkForRefresh();
@@ -419,9 +432,9 @@ class ShopSlot {
         this.clearResourceDisplay();
         
         if (product) {
-            // 尝试加载建筑图标
+            // 尝试加载商品图标
             // 特殊处理：arrow_tower 使用 archer_icon
-            const productType = product.buildingType || product.type;
+            const productType = product.buildingType || product.unitType || product.type;
             let textureKey = productType === 'arrow_tower' ? 'archer_icon' : `${productType}_icon`;
             
             console.log(`[ShopSlot] Setting product ${productType}, looking for texture: ${textureKey}`);
