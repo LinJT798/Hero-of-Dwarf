@@ -36,8 +36,28 @@ jobs:
         env:
           NODE_ENV: production
           
-      - name: Create .nojekyll
-        run: touch dist/.nojekyll
+      - name: Create .nojekyll and debug files
+        run: |
+          touch dist/.nojekyll
+          cat > dist/test.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>测试页面</title>
+          </head>
+          <body>
+              <h1>测试页面</h1>
+              <p>如果你能看到这个页面，说明 GitHub Pages 部署成功了。</p>
+              <p>当前时间：<span id="time"></span></p>
+              <p><a href="/Hero-of-Dwarf/">返回游戏</a></p>
+              <script>
+                  document.getElementById('time').textContent = new Date().toLocaleString();
+              </script>
+          </body>
+          </html>
+          EOF
           
       - name: List dist contents
         run: |
@@ -45,6 +65,9 @@ jobs:
           ls -la dist/
           echo "Contents of dist/index.html:"
           cat dist/index.html
+          echo ""
+          echo "Checking for .ts references in dist:"
+          find dist -type f \( -name "*.html" -o -name "*.js" \) -exec grep -l "\.ts[\"']" {} \; || echo "No .ts references found"
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
