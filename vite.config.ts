@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '/magic-same-game/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/Hero-of-Dwarf/' : '/',
   root: './',
   build: {
     outDir: 'dist',
