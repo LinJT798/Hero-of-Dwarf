@@ -74,7 +74,8 @@ Port 3000 is in use, trying another one...
 
   ➜  Local:   http://localhost:3001/
   ➜  Network: use --host to expose
-vite] page reload src/entities/match3/Match3Grid.ts
+3:43:18 PM [vite] page reload dist/index.html
+id.ts
 8:08:21 PM [vite] page reload src/entities/match3/Match3Grid.ts
 8:08:33 PM [vite] page reload src/entities/match3/Match3Grid.ts
 8:11:46 PM [vite] page reload src/entities/match3/Match3Grid.ts
@@ -105,3 +106,4 @@ Port 3001 is in use, trying another one...
 
   ➜  Local:   http://localhost:3002/
   ➜  Network: use --host to expose
+3:43:18 PM [vite] page reload dist/index.html
