@@ -3,6 +3,23 @@
   "gridHeight": 7,
   "cellSize": 51,
   "resourceTypes": ["gold", "wood", "stone", "mithril", "food"],
+  "nonResourceTypes": ["dirt", "grass", "lava", "sand"],
+  "blockDistribution": {
+    "resources": {
+      "gold": 6,
+      "wood": 8,
+      "stone": 8,
+      "mithril": 4,
+      "food": 8
+    },
+    "nonResources": {
+      "dirt": 8,
+      "grass": 6,
+      "lava": 8,
+      "sand": 6
+    },
+    "emptySpaces": 1
+  },
   "dropWeights": {
     "gold": 25,
     "wood": 30,
@@ -12,6 +29,7 @@
   },
   "dropProbability": 0.8,
   "refreshOnComplete": true,
+  "useSmartDistribution": true,
   "position": {
     "x": 469,
     "y": 90

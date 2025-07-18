@@ -332,6 +332,15 @@ export class NewMonsterManager {
             
             console.log(`Wave ${this.currentWave} completed`);
             this.scene.events.emit('wave-completed', { wave: this.currentWave });
+            
+            // 移动到下一波
+            this.currentWave++;
+            
+            // 如果已经完成所有波次
+            if (this.currentWave > this.maxWaves) {
+                console.log('All waves completed!');
+                this.scene.events.emit('all-waves-completed');
+            }
         }
     }
     

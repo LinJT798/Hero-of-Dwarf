@@ -72,12 +72,13 @@ The game follows a resource generation → collection → building → defense c
 - Edge traversal for out-of-bounds paths
 - Same resource type required for valid matches
 
-**Resource Distribution** (src/entities/Match3Grid.ts):
-- 63 cells total: 62 blocks + 1 empty
+**Resource Distribution** (src/entities/match3/Match3Grid.ts + public/configs/game/match3.json):
+- 63 cells total: 62 blocks + 1 empty (configurable via match3.json)
 - Block types:
   - Resources (droppable): gold, wood, stone, mithril, food
   - Non-resources (no drops): dirt, grass, lava, sand
-- Distribution: Resources 8×5 + 2 = 42, Non-resources 5×4 = 20
+- Distribution: Configurable in match3.json blockDistribution section
+  - Default: Resources (gold:10, others:8×4), Non-resources (5×4)
 - Fisher-Yates shuffle for randomization
 
 **Dwarf Task Management** (src/managers/WorldTaskManager.ts):
