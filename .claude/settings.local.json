@@ -18,7 +18,8 @@
       "Bash(rm:*)",
       "Bash(mv:*)",
       "Bash(sips:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
