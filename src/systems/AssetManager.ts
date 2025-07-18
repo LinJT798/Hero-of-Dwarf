@@ -260,12 +260,12 @@ export class AssetManager {
      * 加载进度条相关资源
      */
     loadProgressBarAssets(): void {
-        // 进度条底图
-        this.loadImage('wave_progress_bg', 'assets/images/wave_progress_bg.png');
+        // 进度条底图 - 暂时注释，图片缺失
+        // this.loadImage('wave_progress_bg', 'assets/images/wave_progress_bg.png');
         
-        // 波次图标
-        this.loadImage('wave_normal_icon', 'assets/images/wave_normal_icon.png');
-        this.loadImage('wave_hard_icon', 'assets/images/wave_hard_icon.png');
+        // 波次图标 - 暂时注释，图片缺失
+        // this.loadImage('wave_normal_icon', 'assets/images/wave_normal_icon.png');
+        // this.loadImage('wave_hard_icon', 'assets/images/wave_hard_icon.png');
         
         console.log('[AssetManager] Progress bar assets loaded');
     }
@@ -343,10 +343,10 @@ export class AssetManager {
             { key: 'archer_icon', type: 'image', path: 'assets/images/archer_icon.png' },
             { key: 'dwarf_icon', type: 'image', path: 'assets/images/dwarf_icon.png' },
             
-            // 进度条资源
-            { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
-            { key: 'wave_normal_icon', type: 'image', path: 'assets/images/wave_normal_icon.png' },
-            { key: 'wave_hard_icon', type: 'image', path: 'assets/images/wave_hard_icon.png' },
+            // 进度条资源 - 暂时注释，图片缺失
+            // { key: 'wave_progress_bg', type: 'image', path: 'assets/images/wave_progress_bg.png' },
+            // { key: 'wave_normal_icon', type: 'image', path: 'assets/images/wave_normal_icon.png' },
+            // { key: 'wave_hard_icon', type: 'image', path: 'assets/images/wave_hard_icon.png' },
             
             // 波次提示横幅
             { key: 'wave_normal_banner', type: 'image', path: 'assets/images/wave_normal_banner.png' },
@@ -368,7 +368,7 @@ export class AssetManager {
             { key: 'coin', type: 'image', path: 'assets/images/coin.png' },
             { key: 'wood', type: 'image', path: 'assets/images/wood.png' },
             { key: 'stone', type: 'image', path: 'assets/images/stone.png' },
-            { key: 'mithril', type: 'image', path: 'assets/images/mithrill.png' },
+            { key: 'mithril', type: 'image', path: 'assets/images/mithril.png' },
             { key: 'food', type: 'image', path: 'assets/images/food.png' },
             
             // 非资源方块图片 (可消除但不掉落资源)
