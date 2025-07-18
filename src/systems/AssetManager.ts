@@ -418,7 +418,10 @@ export class AssetManager {
             
             // 连连看区域
             { key: 'map', type: 'image', path: 'assets/images/map.png' },
-            { key: 'land', type: 'image', path: 'assets/images/land.png' }
+            { key: 'land', type: 'image', path: 'assets/images/land.png' },
+            
+            // 胜利图片
+            { key: 'victory-image', type: 'image', path: 'assets/images/victory-image.png' }
         ];
 
         try {

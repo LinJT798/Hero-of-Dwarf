@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "title": "魔法连连看塔防 - 背景故事",
+    "description": "矮人们与哥布林大军的战斗故事",
+    "totalPages": 8,
+    "version": "1.0.0"
+  },
+  "pages": [
+    {
+      "pageNumber": 1,
+      "image": "assets/images/story/page-1.png",
+      "text": "矮人们一直在地下过着与世无争的生活，他们热爱工艺，善于锻造，在深山中建立了自己的王国。"
+    },
+    {
+      "pageNumber": 2,
+      "image": "assets/images/story/page-2.png",
+      "text": "直到有一天，邪恶的哥布林大军从西方来袭，它们贪婪地觊觎着矮人们的财富和家园。"
+    },
+    {
+      "pageNumber": 3,
+      "image": "assets/images/story/page-3.png",
+      "text": "哥布林们发动了猛烈的攻击，要摧毁矮人们世代居住的美丽家园。"
+    },
+    {
+      "pageNumber": 4,
+      "image": "assets/images/story/page-4.png",
+      "text": "矮人们伤亡惨重，无数的财富被掠夺，无数矮人战士倒在了血泊中。"
+    },
+    {
+      "pageNumber": 5,
+      "image": "assets/images/story/page-5.png",
+      "text": "当哥布林再一次来袭时，矮人们决心要反击，他们要夺回自己的财富和家园。"
+    },
+    {
+      "pageNumber": 6,
+      "image": "assets/images/story/page-6.png",
+      "text": "矮人们开始运用自己的采矿、锻造技能，在矿山中发掘各种资源。"
+    },
+    {
+      "pageNumber": 7,
+      "image": "assets/images/story/page-7.png",
+      "text": "矮人们用这些资源建立起了强大的防御塔，准备抵御哥布林大军的进攻。"
+    },
+    {
+      "pageNumber": 8,
+      "image": "assets/images/story/page-8.png",
+      "text": "战斗吧！矮人们！"
+    }
+  ],
+  "settings": {
+    "transitionDuration": 500,
+    "textSpeed": 50,
+    "autoAdvance": false,
+    "backgroundMusic": "story_bgm",
+    "soundEffects": {
+      "pageFlip": "page_flip",
+      "buttonClick": "button_click"
+    }
+  }
+}

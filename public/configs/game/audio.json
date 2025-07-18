@@ -5,7 +5,8 @@
   },
   "soundEffects": {
     "match_success": "assets/audio/sfx/match_success.wav",
-    "attack": "assets/audio/sfx/attack.wav"
+    "attack": "assets/audio/sfx/attack.wav",
+    "victory-sound": "assets/audio/sfx/victory-sound.wav"
   },
   "volumes": {
     "music": 0.7,

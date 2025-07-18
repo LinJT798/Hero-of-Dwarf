@@ -126,7 +126,7 @@ export class GameStateManager {
         this.addScore(1000); // 胜利奖励
         
         console.log('VICTORY! All waves defeated!');
-        this.showGameOverScreen(true);
+        this.showVictoryImage();
     }
 
     /**
@@ -136,13 +136,109 @@ export class GameStateManager {
         this.gameState = GameState.DEFEAT;
         
         console.log('GAME OVER! Castle destroyed!');
-        this.showGameOverScreen(false);
+        this.showGameOverScreen();
     }
 
     /**
-     * 显示游戏结束界面
+     * 显示胜利图片
      */
-    private showGameOverScreen(isVictory: boolean): void {
+    private showVictoryImage(): void {
+        if (this.gameOverScreen) {
+            this.gameOverScreen.destroy();
+        }
+
+        this.gameOverScreen = this.scene.add.container(640, 416); // 屏幕中心
+
+        // 胜利图片 - 设置为609x609大小
+        const victoryImage = this.scene.add.image(0, 0, 'victory-image');
+        victoryImage.setOrigin(0.5);
+        victoryImage.setDisplaySize(609, 609);
+        
+        // 初始设置为透明和较小，用于浮现动画
+        victoryImage.setAlpha(0);
+        victoryImage.setScale(0.5);
+        
+        this.gameOverScreen.add(victoryImage);
+
+        // 播放胜利音效
+        this.playVictorySound();
+
+        // 胜利图片浮现动画效果
+        this.scene.tweens.add({
+            targets: victoryImage,
+            alpha: 1,
+            scale: 0.6,
+            duration: 1000,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                // 动画完成后创建重新开始按钮
+                this.createRestartButton();
+            }
+        });
+    }
+
+    /**
+     * 播放胜利音效
+     */
+    private playVictorySound(): void {
+        try {
+            if (this.scene.sound && this.scene.sound.get('victory-sound')) {
+                this.scene.sound.play('victory-sound', { volume: 0.8 });
+            }
+        } catch (error) {
+            console.warn('Failed to play victory sound:', error);
+        }
+    }
+
+    /**
+     * 创建重新开始按钮
+     */
+    private createRestartButton(): void {
+        if (!this.gameOverScreen) return;
+
+        // 重新开始按钮（在图片下方）
+        const restartButton = this.scene.add.rectangle(0, 350, 200, 60, 0x4CAF50);
+        restartButton.setStrokeStyle(3, 0xFFFFFF);
+        restartButton.setInteractive();
+        
+        const restartText = this.scene.add.text(0, 350, '重新开始', {
+            fontSize: '20px',
+            color: '#FFFFFF',
+            fontStyle: 'bold'
+        });
+        restartText.setOrigin(0.5);
+
+        // 按钮初始透明，然后渐入
+        restartButton.setAlpha(0);
+        restartText.setAlpha(0);
+
+        restartButton.on('pointerdown', () => {
+            this.restartGame();
+        });
+
+        restartButton.on('pointerover', () => {
+            restartButton.setFillStyle(0x66BB6A);
+        });
+
+        restartButton.on('pointerout', () => {
+            restartButton.setFillStyle(0x4CAF50);
+        });
+
+        this.gameOverScreen.add([restartButton, restartText]);
+
+        // 按钮渐入动画
+        this.scene.tweens.add({
+            targets: [restartButton, restartText],
+            alpha: 1,
+            duration: 500,
+            ease: 'Power2'
+        });
+    }
+
+    /**
+     * 显示失败界面
+     */
+    private showGameOverScreen(): void {
         if (this.gameOverScreen) {
             this.gameOverScreen.destroy();
         }
@@ -154,9 +250,9 @@ export class GameStateManager {
         this.gameOverScreen.add(background);
 
         // 标题
-        const title = this.scene.add.text(0, -150, isVictory ? '胜利!' : '失败!', {
+        const title = this.scene.add.text(0, -150, '失败!', {
             fontSize: '48px',
-            color: isVictory ? '#00FF00' : '#FF0000',
+            color: '#FF0000',
             fontStyle: 'bold'
         });
         title.setOrigin(0.5);
@@ -204,22 +300,13 @@ export class GameStateManager {
 
         this.gameOverScreen.add([restartButton, restartText]);
 
-        // 游戏统计信息
-        if (isVictory) {
-            const victoryMessage = this.scene.add.text(0, -10, '成功防守了所有怪物波次!', {
-                fontSize: '16px',
-                color: '#FFFF00'
-            });
-            victoryMessage.setOrigin(0.5);
-            this.gameOverScreen.add(victoryMessage);
-        } else {
-            const defeatMessage = this.scene.add.text(0, -10, '城堡被摧毁了...', {
-                fontSize: '16px',
-                color: '#FF8888'
-            });
-            defeatMessage.setOrigin(0.5);
-            this.gameOverScreen.add(defeatMessage);
-        }
+        // 失败信息
+        const defeatMessage = this.scene.add.text(0, -10, '城堡被摧毁了...', {
+            fontSize: '16px',
+            color: '#FF8888'
+        });
+        defeatMessage.setOrigin(0.5);
+        this.gameOverScreen.add(defeatMessage);
     }
 
     /**

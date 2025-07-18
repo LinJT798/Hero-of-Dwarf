@@ -350,7 +350,7 @@ export class MainMenuScene extends Scene {
         this.stopMenuBGM();
         
         // 直接切换到游戏场景
-        this.scene.start('MainGameScene');
+        this.scene.start('StoryScene');
     }
     
     /**
