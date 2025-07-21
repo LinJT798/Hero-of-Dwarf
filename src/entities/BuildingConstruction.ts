@@ -81,7 +81,7 @@ export class BuildingConstruction {
                 animsManager.create({
                     key: animKey,
                     frames: buildFrames,
-                    frameRate: 20, // 20fps统一帧率
+                    frameRate: 20, // 20fps (建造动画未优化，保持原帧率)
                     repeat: 0 // 不循环，播放一次
                 });
                 

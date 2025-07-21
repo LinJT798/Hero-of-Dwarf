@@ -560,7 +560,7 @@ class Building implements CombatUnit {
                 animsManager.create({
                     key: animKey,
                     frames: idleFrames,
-                    frameRate: 20, // 20fps统一帧率
+                    frameRate: 4, // 调整为4fps (22帧 ÷ 5秒)
                     repeat: 0 // 播放一次
                 });
                 
@@ -833,7 +833,7 @@ class Building implements CombatUnit {
                 this.scene.anims.create({
                     key: animKey,
                     frames: buildFrames,
-                    frameRate: 20, // 20fps
+                    frameRate: 20, // 20fps (建造动画未优化，保持原帧率)
                     repeat: 0 // 播放一次
                 });
                 
