@@ -171,7 +171,7 @@ export class Goblin implements CombatUnit {
                 animsManager.create({
                     key: 'goblin_walk',
                     frames: walkFrames,
-                    frameRate: 20,
+                    frameRate: 7, // 调整为7帧/秒 (35帧 ÷ 5秒)
                     repeat: -1 // 循环播放
                 });
                 console.log(`Created goblin walk animation with ${walkFrames.length} frames`);
@@ -191,7 +191,7 @@ export class Goblin implements CombatUnit {
                 animsManager.create({
                     key: 'goblin_attack',
                     frames: attackFrames,
-                    frameRate: 20,
+                    frameRate: 7, // 调整为7帧/秒 (35帧 ÷ 5秒)
                     repeat: 0 // 播放一次
                 });
                 console.log(`Created goblin attack animation with ${attackFrames.length} frames`);
@@ -211,7 +211,7 @@ export class Goblin implements CombatUnit {
                 animsManager.create({
                     key: 'goblin_death',
                     frames: deathFrames,
-                    frameRate: 20,
+                    frameRate: 10, // 调整为10帧/秒 (52帧 ÷ 5秒)
                     repeat: 0 // 播放一次
                 });
                 console.log(`Created goblin death animation with ${deathFrames.length} frames`);

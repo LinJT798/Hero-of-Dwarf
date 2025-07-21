@@ -302,7 +302,7 @@ export class Dwarf implements CombatUnit {
             animsManager.create({
                 key: `dwarf_walk_${this.id}`,
                 frames: walkFrames,
-                frameRate: 20, // 原始20帧/秒
+                frameRate: 7, // 调整为7帧/秒 (35帧 ÷ 5秒)
                 repeat: -1
             });
         }
@@ -323,7 +323,7 @@ export class Dwarf implements CombatUnit {
                     animsManager.create({
                         key: `dwarf_idle1_${this.id}`,
                         frames: idle1Frames,
-                        frameRate: 20, // 20帧/秒，统一帧率
+                        frameRate: 5, // 调整为5帧/秒 (27帧 ÷ 5秒)
                         repeat: 0 // 播放一次
                     });
                 }
@@ -354,7 +354,7 @@ export class Dwarf implements CombatUnit {
                     animsManager.create({
                         key: `dwarf_idle2_${this.id}`,
                         frames: idle2Frames,
-                        frameRate: 20, // 20帧/秒，统一帧率
+                        frameRate: 5, // 调整为5帧/秒 (27帧 ÷ 5秒)
                         repeat: 0 // 播放一次
                     });
                 }
@@ -388,7 +388,7 @@ export class Dwarf implements CombatUnit {
                     animsManager.create({
                         key: `dwarf_build_${this.id}`,
                         frames: buildFrames,
-                        frameRate: 20, // 20帧/秒，统一帧率
+                        frameRate: 7, // 调整为7帧/秒 (适配减少的帧数)
                         repeat: -1
                     });
                     console.log(`[Dwarf ${this.id}] 建造动画创建成功`);
@@ -420,7 +420,7 @@ export class Dwarf implements CombatUnit {
                     animsManager.create({
                         key: `dwarf_attack_${this.id}`,
                         frames: attackFrames,
-                        frameRate: 20, // 20帧/秒，统一帧率
+                        frameRate: 7, // 调整为7帧/秒 (35帧 ÷ 5秒)
                         repeat: 0 // 播放一次
                     });
                     console.log(`[Dwarf ${this.id}] 攻击动画创建成功，共 ${attackFrames.length} 帧`);
@@ -452,7 +452,7 @@ export class Dwarf implements CombatUnit {
                     animsManager.create({
                         key: `dwarf_death_${this.id}`,
                         frames: deathFrames,
-                        frameRate: 20, // 20帧/秒
+                        frameRate: 10, // 调整为10帧/秒 (52帧 ÷ 5秒)
                         repeat: 0 // 播放一次
                     });
                     console.log(`[Dwarf ${this.id}] 死亡动画创建成功，共 ${deathFrames.length} 帧`);
