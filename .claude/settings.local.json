@@ -25,6 +25,7 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(chmod:*)",
+      "Bash(cd:*)",
       "Bash(cd:*)"
     ],
     "deny": []

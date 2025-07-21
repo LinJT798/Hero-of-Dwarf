@@ -180,23 +180,23 @@ export class LazyAssetLoader {
      * 获取优化后的帧数（减少后的帧数）
      */
     private getOptimizedFrameCount(unitType: string, animationType: string): number {
-        // 优化后的帧数配置
+        // 优化后的帧数配置（实际优化后的帧数）
         const frameConfigs: Record<string, Record<string, number>> = {
             dwarf: {
-                walk: 34,      // 原101帧，每3帧取1
-                idle1: 26,     // 原101帧，每4帧取1
-                idle2: 26,     // 原101帧，每4帧取1
-                attack: 34,    // 原101帧，每3帧取1
-                death: 51      // 原101帧，每2帧取1
+                walk: 35,      // 原101帧，每3帧取1
+                idle1: 27,     // 原101帧，每4帧取1
+                idle2: 27,     // 原101帧，每4帧取1
+                attack: 35,    // 原101帧，每3帧取1
+                death: 52      // 原101帧，每2帧取1
             },
             goblin: {
-                walk: 34,      // 原101帧，每3帧取1
+                walk: 35,      // 原101帧，每3帧取1
                 idle: 26,      // 原101帧，每4帧取1
-                attack: 34,    // 原101帧，每3帧取1
-                death: 51      // 原101帧，每2帧取1
+                attack: 35,    // 原101帧，每3帧取1
+                death: 52      // 原101帧，每2帧取1
             },
             arrow_tower: {
-                idle: 21,      // 原101帧，每5帧取1
+                idle: 22,      // 原101帧，每5帧取1
                 attack: 34     // 原101帧，每3帧取1
             }
         };
