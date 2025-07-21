@@ -75,12 +75,14 @@ Port 3000 is in use, trying another one...
   ➜  Local:   http://localhost:3001/
   ➜  Network: use --host to expose
 3:43:18 PM [vite] page reload dist/index.html
-id.ts
-8:08:21 PM [vite] page reload src/entities/match3/Match3Grid.ts
-8:08:33 PM [vite] page reload src/entities/match3/Match3Grid.ts
-8:11:46 PM [vite] page reload src/entities/match3/Match3Grid.ts
-8:18:06 PM [vite] page reload src/managers/NewMonsterManager.ts
-11:34:20 AM [vite] page reload src/managers/NewMonsterManager.ts
+11:49:58 AM [vite] vite.config.ts changed, restarting server...
+11:49:58 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+11:52:48 AM [vite] vite.config.ts changed, restarting server...
+11:52:49 AM [vite] server restarted.
+] page reload src/managers/NewMonsterManager.ts
 11:34:39 AM [vite] page reload src/systems/GameStateManager.ts
 11:34:59 AM [vite] page reload src/systems/GameStateManager.ts
 11:35:03 AM [vite] page reload src/systems/GameStateManager.ts
@@ -107,3 +109,15 @@ Port 3001 is in use, trying another one...
   ➜  Local:   http://localhost:3002/
   ➜  Network: use --host to expose
 3:43:18 PM [vite] page reload dist/index.html
+11:49:58 AM [vite] vite.config.ts changed, restarting server...
+Port 3000 is in use, trying another one...
+11:49:58 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
+11:52:48 AM [vite] vite.config.ts changed, restarting server...
+Port 3000 is in use, trying another one...
+11:52:48 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
